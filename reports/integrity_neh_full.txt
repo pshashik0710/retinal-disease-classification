@@ -1,0 +1,101 @@
+
+======================================================================
+INPUTS
+======================================================================
+  root     : D:\datasets\neh\NEH_UT_2021RetinalOCTDataset
+  manifest : manifests\neh_split.csv  (12,641 rows)
+
+======================================================================
+1. MANIFEST PATHS vs DISK
+======================================================================
+  referenced by manifest : 12,641
+  image files on disk    : 16,803
+  all manifest paths exist                      OK
+  NOTE: 4162 images on disk are not in the manifest
+      CNV/1/000_Drusen.jpg
+      CNV/1/001_Drusen.jpg
+      CNV/1/002_Drusen.jpg
+      CNV/1/003_Normal.jpg
+      CNV/1/004_Normal.jpg
+      CNV/1/005_Drusen.jpg
+      CNV/1/006_Normal.jpg
+      CNV/1/007_Normal.jpg
+      CNV/1/008_Drusen.jpg
+      CNV/1/009_Drusen.jpg
+      CNV/1/010_Drusen.jpg
+      CNV/1/021_Drusen.jpg
+      CNV/1/022_Drusen.jpg
+      CNV/1/023_Normal.jpg
+      CNV/1/024_Normal.jpg
+      CNV/1/025_Normal.jpg
+      CNV/1/026_Normal.jpg
+      CNV/1/027_Normal.jpg
+      CNV/1/028_Normal.jpg
+      CNV/1/029_Normal.jpg
+      ... and 4142 more
+      by top-level folder: {'CNV': 2004, 'DRUSEN': 2129, 'NORMAL': 29}
+
+======================================================================
+2. IMAGE READABILITY
+======================================================================
+  skipped (--no-open)
+
+======================================================================
+3. BYTE-LEVEL DUPLICATES
+======================================================================
+  hashing 12,641 of 12,641 images
+  found 54 duplicate content groups:
+      ['CNV/147/011_CNV.tif', 'CNV/26/011_CNV.tif']
+      ['CNV/147/012_CNV.tif', 'CNV/26/012_CNV.tif']
+      ['CNV/147/013_CNV.tif', 'CNV/26/013_CNV.tif']
+      ['CNV/147/014_CNV.tif', 'CNV/26/014_CNV.tif']
+      ['CNV/147/015_CNV.tif', 'CNV/26/015_CNV.tif']
+      ['CNV/147/016_CNV.tif', 'CNV/26/016_CNV.tif']
+      ['CNV/147/017_CNV.tif', 'CNV/26/017_CNV.tif']
+      ['CNV/147/018_CNV.tif', 'CNV/26/018_CNV.tif']
+      ['CNV/147/019_CNV.tif', 'CNV/26/019_CNV.tif']
+      ['CNV/147/020_CNV.tif', 'CNV/26/020_CNV.tif']
+  *** FAIL: 19 duplicate groups span different CLASSES
+      ['CNV/22/008_CNV.tif', 'DRUSEN/69/008_Drusen.tif']
+      ['CNV/22/009_CNV.tif', 'DRUSEN/69/009_Drusen.tif']
+      ['CNV/22/010_CNV.tif', 'DRUSEN/69/010_Drusen.tif']
+      ['CNV/22/011_CNV.tif', 'DRUSEN/69/011_Drusen.tif']
+      ['CNV/22/012_CNV.tif', 'DRUSEN/69/012_Drusen.tif']
+
+======================================================================
+4. SPLIT DISJOINTNESS
+======================================================================
+  patients   disjoint across all splits         OK
+  eyes       disjoint across all splits         OK
+  files      disjoint across all splits         OK
+
+======================================================================
+5. CLASS DISTRIBUTION
+======================================================================
+
+  B-scans:
+    y_label   CNV  DRUSEN  NORMAL
+    split                        
+    test      761     697    1197
+    train    2026    2379    3596
+    val       447     664     874
+
+  Patients:
+    Class  CNV  DRUSEN  NORMAL
+    split                     
+    test    33      32      24
+    train  102     102      76
+    val     26      26      20
+
+  B-scans per volume:
+    mean 22.8, median 25, range 1-31
+    NOTE: adjacent B-scans from one eye are near-identical. An image-level
+          split would place siblings in both train and test.
+
+======================================================================
+VERDICT
+======================================================================
+  1 CHECK(S) FAILED:
+    - 19 duplicate groups span different CLASSES
+
+  Do not train until these are resolved.

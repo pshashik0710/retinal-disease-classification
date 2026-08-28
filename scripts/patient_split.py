@@ -71,10 +71,63 @@ def load(csv_path: str) -> pd.DataFrame:
     return df
 
 
+def apply_groups(df: pd.DataFrame, groups_csv, exclude_conflicted: bool):
+    """
+    Attach a 'group_key' used for splitting. Without --groups this is just
+    patient_key. With it, patients linked by byte-identical images share a
+    group_key, so a duplicated eye recorded under two patient IDs cannot end
+    up in two different splits.
+    """
+    if not groups_csv:
+        df["group_key"] = df["patient_key"]
+        if exclude_conflicted:
+            sys.exit("ERROR: --exclude-conflicted requires --groups")
+        return df
+
+    if not os.path.isfile(groups_csv):
+        sys.exit(f"ERROR: groups file not found: {groups_csv}")
+
+    g = pd.read_csv(groups_csv)
+    for col in ("patient_key", "group_key"):
+        if col not in g.columns:
+            sys.exit(f"ERROR: {groups_csv} missing column '{col}'")
+
+    mapping = dict(zip(g["patient_key"], g["group_key"]))
+    unmapped = set(df["patient_key"]) - set(mapping)
+    if unmapped:
+        sys.exit(f"ERROR: {len(unmapped)} patients absent from {groups_csv}: "
+                 f"{sorted(unmapped)[:5]}")
+
+    df["group_key"] = df["patient_key"].map(mapping)
+    n_merged = df["patient_key"].nunique() - df["group_key"].nunique()
+    if n_merged:
+        print(f"  Grouping: {df['patient_key'].nunique()} patients -> "
+              f"{df['group_key'].nunique()} independent groups "
+              f"({n_merged} merged as duplicates).")
+
+    if exclude_conflicted:
+        if "conflicted" not in g.columns:
+            sys.exit(f"ERROR: {groups_csv} has no 'conflicted' column")
+        bad = set(g.loc[g["conflicted"].astype(bool), "patient_key"])
+        if bad:
+            n0 = len(df)
+            df = df[~df["patient_key"].isin(bad)].reset_index(drop=True)
+            print(f"  Excluded {len(bad)} patients with cross-class duplicate "
+                  f"images ({n0 - len(df)} B-scans dropped): "
+                  f"{sorted(bad)}")
+        else:
+            print("  No conflicted patients to exclude.")
+
+    return df
+
+
 def summarise(df: pd.DataFrame, protocol: str) -> None:
     print(f"\n{'='*68}\nDATASET SUMMARY  (protocol: {protocol})\n{'='*68}")
     print(f"  B-scans        : {len(df):,}")
     print(f"  Patients       : {df['patient_key'].nunique()}")
+    if "group_key" in df.columns and df["group_key"].nunique() != df["patient_key"].nunique():
+        print(f"  Split groups   : {df['group_key'].nunique()} "
+              f"(duplicated patients merged)")
     print(f"  Eyes (volumes) : {df['eye_key'].nunique()}")
 
     vol = df.groupby("eye_key").size()
@@ -106,7 +159,7 @@ def split(df: pd.DataFrame, test_ratio: float, val_ratio: float, seed: int):
 
     for cls in sorted(df["Class"].unique()):
         sub = df[df["Class"] == cls]
-        groups = sub["patient_key"].values
+        groups = sub["group_key"].values
 
         gss = GroupShuffleSplit(n_splits=1, test_size=test_ratio,
                                 random_state=seed)
@@ -115,7 +168,7 @@ def split(df: pd.DataFrame, test_ratio: float, val_ratio: float, seed: int):
         dev = sub.iloc[dev_rel]
         gss2 = GroupShuffleSplit(n_splits=1, test_size=val_ratio,
                                  random_state=seed + 1)
-        _, val_rel = next(gss2.split(dev, groups=dev["patient_key"].values))
+        _, val_rel = next(gss2.split(dev, groups=dev["group_key"].values))
 
         df.loc[sub.index[test_rel], "split"] = "test"
         df.loc[dev.index[val_rel], "split"] = "val"
@@ -129,6 +182,7 @@ def verify(df: pd.DataFrame) -> bool:
 
     pats = {s: set(g["patient_key"]) for s, g in df.groupby("split")}
     eyes = {s: set(g["eye_key"]) for s, g in df.groupby("split")}
+    grps = {s: set(g["group_key"]) for s, g in df.groupby("split")}
 
     print(f"\n  {'Split':<8}{'B-scans':>10}{'Patients':>11}{'Eyes':>8}{'%':>8}")
     print(f"  {'-'*45}")
@@ -140,14 +194,15 @@ def verify(df: pd.DataFrame) -> bool:
     print(f"  {'TOTAL':<8}{len(df):>10,}{df['patient_key'].nunique():>11}"
           f"{df['eye_key'].nunique():>8}{100.0:>7.1f}%")
 
-    print("\n  Patient-level intersections (must all be 0):")
+    print("\n  Intersections (must all be 0):")
     ok = True
-    for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
-        n = len(pats.get(a, set()) & pats.get(b, set()))
-        flag = "OK" if n == 0 else "*** LEAK ***"
-        if n:
-            ok = False
-        print(f"    {a:<6} n {b:<6}: {n:>4}   {flag}")
+    for name, d in (("patients", pats), ("groups", grps)):
+        for a, b in (("train", "val"), ("train", "test"), ("val", "test")):
+            n = len(d.get(a, set()) & d.get(b, set()))
+            flag = "OK" if n == 0 else "*** LEAK ***"
+            if n:
+                ok = False
+            print(f"    {name:<9} {a:<6} n {b:<6}: {n:>4}   {flag}")
 
     print("\n  Class distribution per split (B-scans):")
     ct = pd.crosstab(df["split"], df["y_label"])
@@ -179,9 +234,19 @@ def main():
     p.add_argument("--val-ratio", type=float, default=0.20,
                    help="fraction of the remaining development set")
     p.add_argument("--seed", type=int, default=42)
+    p.add_argument("--groups", default=None,
+                   help="optional patient_groups.csv from dedup_patients.py. "
+                        "Links patients that share identical images so "
+                        "duplicated eyes cannot straddle a split.")
+    p.add_argument("--exclude-conflicted", action="store_true",
+                   help="drop patients whose images are byte-identical to "
+                        "another patient of a DIFFERENT class (contradictory "
+                        "labels). Requires --groups.")
     args = p.parse_args()
 
+    groups_csv_used = args.groups
     df = load(args.csv)
+    df = apply_groups(df, args.groups, args.exclude_conflicted)
 
     if args.protocol == "worstcase":
         df = df[df["Class"] == df["Label"]].copy()
@@ -199,7 +264,7 @@ def main():
     ok = verify(df)
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
-    cols = ["Directory", "patient_key", "eye_key", "Class", "Label",
+    cols = ["Directory", "patient_key", "group_key", "eye_key", "Class", "Label",
             "y_label", "y", "Eye", "B-scan", "split"]
     df[cols].to_csv(args.out, index=False)
 
@@ -214,6 +279,9 @@ def main():
         "n_images": int(len(df)),
         "n_patients": int(df["patient_key"].nunique()),
         "n_eyes": int(df["eye_key"].nunique()),
+        "n_split_groups": int(df["group_key"].nunique()),
+        "groups_file": groups_csv_used,
+        "excluded_conflicted": bool(args.exclude_conflicted),
         "patient_disjoint": bool(ok),
         "counts": {s: int((df["split"] == s).sum()) for s in ("train", "val", "test")},
     }

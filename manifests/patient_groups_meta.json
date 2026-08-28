@@ -1,0 +1,10 @@
+{
+  "root": "D:\\datasets\\neh\\NEH_UT_2021RetinalOCTDataset",
+  "source_csv": "datasets\\neh_meta\\data_information.csv",
+  "n_patients": 441,
+  "n_groups": 437,
+  "n_linked_patients": 8,
+  "n_conflicted_patients": 4,
+  "duplicate_image_groups": 125,
+  "cross_class_image_groups": 62
+}
