@@ -1,37 +1,88 @@
+# ============================================================
+# Python
+# ============================================================
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# ============================================================
+# Environments
+# ============================================================
+.venv/
+venv/
+env/
+ENV/
+.env
+.env.*
+!.env.example
+Miniconda3-*.sh
+activate.bat
+
+# ============================================================
+# Model weights & large binaries
+# ============================================================
 *.pth
 *.pt
 *.ckpt
 *.h5
 *.onnx
-*.pkl
-*.npy
-*.npz
+*.safetensors
+
+# ============================================================
+# Archives
+# ============================================================
 *.zip
 *.tar
 *.gz
 *.7z
+*.rar
 
-datasets/
-dataset/
-checkpoints/
-checkpoints_label_smoothing/
+# ============================================================
+# Datasets — ignore image data, KEEP metadata/manifests
+# ============================================================
+# ============================================================
+# Datasets — ignore image data, KEEP metadata/manifests
+# ============================================================
+/datasets/*
+!/datasets/neh_meta/
+/datasets/neh_meta/*
+!/datasets/neh_meta/*.csv
+!/datasets/neh_meta/*.py
+/generated_images/
 
-metrics/
-metrics_label_smoothing/
+# Cached feature arrays (large); split manifests are CSV and tracked
+*.npy
+*.npz
+*.pkl
+!/manifests/*.npy
 
-plots/
-plots_label_smoothing/
+# ============================================================
+# Experiment outputs — weights ignored, results TRACKED
+# ============================================================
+/outputs/**/checkpoints/
+/checkpoints*/
+/wandb/
 
-generated_images/
-two_stream_results/
-two_stream_checkpoints/
+# ============================================================
+# Logs
+# ============================================================
+/logs/
+*.log
+slurm-*.out
+nohup.out
+core.*
+*.err
 
-wandb/
-logs/
-
-.env
-.ipynb_checkpoints/
-
-Miniconda3-latest-Linux-x86_64.sh
+# ============================================================
+# OS / editors
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+*.lnk
+.vscode/
+.idea/
