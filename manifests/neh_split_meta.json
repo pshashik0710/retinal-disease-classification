@@ -1,0 +1,18 @@
+{
+  "generated": "2026-08-28T16:30:08",
+  "source_csv": "datasets\\neh_meta\\data_information.csv",
+  "protocol": "worstcase",
+  "seed": 42,
+  "test_ratio": 0.2,
+  "val_ratio_of_dev": 0.2,
+  "grouping_key": "(Class, Patient ID) -- IDs are not unique across classes",
+  "n_images": 12641,
+  "n_patients": 441,
+  "n_eyes": 554,
+  "patient_disjoint": true,
+  "counts": {
+    "train": 8001,
+    "val": 1985,
+    "test": 2655
+  }
+}
