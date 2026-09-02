@@ -1,0 +1,79 @@
+
+======================================================================
+INPUTS
+======================================================================
+  root     : D:\datasets\kermany2018\OCT2017
+  manifest : manifests\kermany_official.csv  (84,484 rows)
+
+======================================================================
+1. MANIFEST PATHS vs DISK
+======================================================================
+  referenced by manifest : 84,484
+  image files on disk    : 84,484
+  all manifest paths exist                      OK
+  no orphan files on disk                       OK
+
+======================================================================
+2. IMAGE READABILITY
+======================================================================
+  opening 3,018 of 84,484 images (every 28th)
+  all sampled images open cleanly               OK
+
+  colour modes: {'L': 3018}
+  distinct dimensions: 5
+        512 x 496      1392
+        768 x 496       763
+        512 x 512       564
+       1536 x 496       287
+       1024 x 496        12
+  aspect ratios present: [1.0, 1.032, 1.548, 2.065, 3.097]
+  NOTE: non-square resize will distort these. Resize the short side and crop, or pad, rather than forcing a square.
+
+======================================================================
+3. BYTE-LEVEL DUPLICATES
+======================================================================
+  hashing 3,018 of 84,484 images
+  found 1 duplicate content groups:
+      ['test/DRUSEN/DRUSEN-8870525-3.jpeg', 'train/DRUSEN/DRUSEN-8870525-50.jpeg']
+  *** FAIL: 1 duplicate groups span different CLASSES
+      ['test/DRUSEN/DRUSEN-8870525-3.jpeg', 'train/DRUSEN/DRUSEN-8870525-50.jpeg']
+
+======================================================================
+4. SPLIT DISJOINTNESS
+======================================================================
+  *** FAIL: patients: overlap between splits -> trainnval=21, trainntest=546, valntest=1
+  *** FAIL: eyes: overlap between splits -> trainnval=21, trainntest=546, valntest=1
+  files      disjoint across all splits         OK
+
+======================================================================
+5. CLASS DISTRIBUTION
+======================================================================
+
+  B-scans:
+    y_label    CNV    DME  DRUSEN  NORMAL
+    split                                
+    test       242    242     242     242
+    train    37205  11348    8616   26315
+    val          8      8       8       8
+
+  Patients:
+    Class  CNV  DME  DRUSEN  NORMAL
+    split                          
+    test     3   37       0      23
+    train  791  610     458    2731
+    val      0    1       0       3
+
+  B-scans per volume:
+    mean 18.1, median 6, range 1-817
+    NOTE: adjacent B-scans from one eye are near-identical. An image-level
+          split would place siblings in both train and test.
+
+======================================================================
+VERDICT
+======================================================================
+  3 CHECK(S) FAILED:
+    - 1 duplicate groups span different CLASSES
+    - patients: overlap between splits -> trainnval=21, trainntest=546, valntest=1
+    - eyes: overlap between splits -> trainnval=21, trainntest=546, valntest=1
+
+  Do not train until these are resolved.
