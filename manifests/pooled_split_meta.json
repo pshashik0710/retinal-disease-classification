@@ -1,0 +1,39 @@
+{
+  "generated": "2026-09-02T14:51:07",
+  "neh_manifest": "manifests\\neh_split.csv",
+  "kermany_manifest": "manifests\\kermany_clean.csv",
+  "seed": 42,
+  "test_ratio": 0.2,
+  "val_ratio_of_dev": 0.2,
+  "n_images_raw": 89242,
+  "n_patients_raw": 5093,
+  "ar_outliers_dropped": 16,
+  "cap": {
+    "cap": 50,
+    "patients_capped": 401,
+    "images_before": 89226,
+    "images_after": 66454
+  },
+  "single_cohort_classes": [
+    "DME"
+  ],
+  "n_images_final": 66454,
+  "n_patients_final": 5093,
+  "n_groups_final": 5091,
+  "patient_disjoint": true,
+  "counts": {
+    "train": 42838,
+    "val": 10244,
+    "test": 13372
+  },
+  "class_counts": {
+    "NORMAL": 29794,
+    "CNV": 18700,
+    "DRUSEN": 9730,
+    "DME": 8230
+  },
+  "cohort_counts": {
+    "kermany": 54742,
+    "neh": 11712
+  }
+}
