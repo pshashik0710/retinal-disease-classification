@@ -53,6 +53,7 @@ activate.bat
 !/datasets/neh_meta/*.csv
 !/datasets/neh_meta/*.py
 /generated_images/
+/features/
 
 # Cached feature arrays (large); split manifests are CSV and tracked
 *.npy
