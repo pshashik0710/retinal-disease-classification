@@ -163,11 +163,24 @@ class OCTDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.paths[idx]
-        try:
-            with Image.open(path) as im:
-                image = np.array(im.convert("RGB"))
-        except Exception as e:
-            raise RuntimeError(f"failed to read {path}: {e}") from e
+
+        image = None
+        for attempt in range(3):
+            try:
+                with Image.open(path) as im:
+                    image = np.array(im.convert("RGB"))
+                break
+            except MemoryError:
+                # transient allocation failure under memory pressure --
+                # give the allocator a moment rather than losing the run
+                import gc, time as _t
+                gc.collect()
+                _t.sleep(0.5 * (attempt + 1))
+            except Exception as e:
+                raise RuntimeError(f"failed to read {path}: {e}") from e
+        if image is None:
+            raise RuntimeError(f"repeated MemoryError reading {path}; "
+                               f"reduce NUM_WORKERS or BATCH_SIZE")
 
         image = self.transform(image=image)["image"]
         label = int(self.labels[idx])
@@ -252,17 +265,19 @@ def get_datasets(manifest_path=None, train_transform=None,
 # =========================================================================
 
 def seed_worker(worker_id):
-    """Seed numpy and random per worker.
+    """Seed numpy and random per worker, and cap threads.
 
-    torch seeds itself per worker, but numpy and python's random are not
-    reliably seeded under every start method, and the augmentation pipeline
-    draws from them.
+    On Windows, workers spawn as fresh processes that re-import torch and
+    pick up the default thread count -- with 2 workers that means three
+    processes each claiming ~12 threads on a 12-core machine. Workers only
+    decode and resize images, so one thread each is right.
     """
+
     import random
+    torch.set_num_threads(1)
     s = torch.initial_seed() % 2 ** 32
     np.random.seed(s)
     random.seed(s)
-
 
 def make_loader(dataset, shuffle, batch_size=None, seed=None):
     batch_size = batch_size or Config.BATCH_SIZE

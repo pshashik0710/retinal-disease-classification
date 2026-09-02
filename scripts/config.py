@@ -99,10 +99,10 @@ class Config:
     DEVICE = "cuda" if _torch.cuda.is_available() else "cpu"
     del _torch
 
-    TORCH_NUM_THREADS = 10      # leave headroom for the dataloader workers
-    NUM_WORKERS = 2
+    TORCH_NUM_THREADS = 8      # leave headroom for the dataloader workers
+    NUM_WORKERS = 0
     PIN_MEMORY = False          # meaningless without CUDA
-    PERSISTENT_WORKERS = True   # only honoured when NUM_WORKERS > 0
+    PERSISTENT_WORKERS = False  # only honoured when NUM_WORKERS > 0
     PREFETCH_FACTOR = 2
     USE_AMP = False             # torch.amp autocast here is CUDA-only
 
