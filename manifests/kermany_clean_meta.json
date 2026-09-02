@@ -1,0 +1,57 @@
+{
+  "root": "D:\\datasets\\kermany2018\\OCT2017",
+  "classes_kept": [
+    "NORMAL",
+    "DRUSEN",
+    "CNV",
+    "DME"
+  ],
+  "n_images_raw": 84484,
+  "n_patients_raw": 4657,
+  "n_unparsed": 0,
+  "n_class_mismatch": 0,
+  "official_split_overlap": {
+    "train_vs_val": {
+      "n_patients": 21,
+      "pct_of_second": 84.0
+    },
+    "train_vs_test": {
+      "n_patients": 546,
+      "pct_of_second": 89.7
+    },
+    "val_vs_test": {
+      "n_patients": 1,
+      "pct_of_second": 0.2
+    }
+  },
+  "n_multiclass_patients": 896,
+  "n_images_after_class_filter": 84484,
+  "n_crossclass_images_dropped": 466,
+  "n_crossclass_patients": 56,
+  "crossclass_combos": {
+    "CNV/DRUSEN": 187,
+    "CNV/NORMAL": 1,
+    "CNV/DME": 21,
+    "DME/NORMAL": 10,
+    "DRUSEN/NORMAL": 6
+  },
+  "n_duplicate_groups": 6779,
+  "n_duplicates_removed": 7582,
+  "hashed_all": true,
+  "dimensions": {
+    "512x496": 34539,
+    "768x496": 19423,
+    "512x512": 14954,
+    "1536x496": 7505,
+    "1024x496": 240,
+    "384x496": 16
+  },
+  "n_images_final": 76677,
+  "n_patients_final": 4656,
+  "class_counts": {
+    "CNV": 31440,
+    "NORMAL": 26287,
+    "DME": 11117,
+    "DRUSEN": 7833
+  }
+}
