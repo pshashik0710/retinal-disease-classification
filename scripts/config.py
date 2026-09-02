@@ -126,7 +126,7 @@ class Config:
     #   "squash"      : plain resize to (IMAGE_SIZE, IMAGE_SIZE).
     #                   What the rejected pipeline did. Kept only so the
     #                   distortion can be quantified as an ablation.
-    RESIZE_STRATEGY = "resize_crop"
+    RESIZE_STRATEGY = "pad"
 
     IMAGENET_MEAN = [0.485, 0.456, 0.406]
     IMAGENET_STD = [0.229, 0.224, 0.225]

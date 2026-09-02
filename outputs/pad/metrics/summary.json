@@ -1,0 +1,81 @@
+{
+  "experiment": "pad",
+  "finished": "2026-09-02T21:06:17",
+  "protocol": "cached linear probe (frozen ConvNeXt features)",
+  "hyperparams": {
+    "epochs_run": 22,
+    "max_epochs": 30,
+    "lr": 0.001,
+    "batch_size": 512,
+    "weight_decay": 0.0001,
+    "dropout": 0.0,
+    "label_smoothing": 0.1,
+    "class_weights": true,
+    "seed": 42
+  },
+  "data": {
+    "manifest": "D:\\Projects\\retinal-disease-classification\\manifests\\pooled_split.csv",
+    "n_train": 42838,
+    "n_val": 10244,
+    "n_test": 13372,
+    "classes": [
+      "NORMAL",
+      "DRUSEN",
+      "CNV",
+      "DME"
+    ]
+  },
+  "best_epoch": 15,
+  "val_at_best": {
+    "accuracy": 0.8444943381491605,
+    "balanced_accuracy": 0.8345651754562533,
+    "precision_macro": 0.7981450024643983,
+    "recall_macro": 0.8345651754562533,
+    "macro_f1": 0.812263282801982,
+    "weighted_f1": 0.8474225449604583,
+    "roc_auc_ovr_macro": 0.9636611339364075,
+    "epoch": 15,
+    "val_loss": 0.8388202117086155,
+    "train_loss": 0.758558561367906
+  },
+  "test": {
+    "accuracy": 0.8315136105294646,
+    "balanced_accuracy": 0.825162418461721,
+    "precision_macro": 0.8004887623093784,
+    "recall_macro": 0.825162418461721,
+    "macro_f1": 0.8101679613192748,
+    "weighted_f1": 0.8348978353840135,
+    "per_class": {
+      "NORMAL": {
+        "precision": 0.9024301114562397,
+        "recall": 0.8528751510965291,
+        "f1": 0.876953125,
+        "support": 5791
+      },
+      "DRUSEN": {
+        "precision": 0.6189913317572892,
+        "recall": 0.733084461035931,
+        "f1": 0.6712240974150823,
+        "support": 2143
+      },
+      "CNV": {
+        "precision": 0.9063400576368876,
+        "recall": 0.8322307488753639,
+        "f1": 0.8677058904676507,
+        "support": 3779
+      },
+      "DME": {
+        "precision": 0.7741935483870968,
+        "recall": 0.8824593128390597,
+        "f1": 0.8247887323943662,
+        "support": 1659
+      }
+    },
+    "roc_auc_ovr_macro": 0.9581613556015182
+  },
+  "cohort_probe": {
+    "cohort_accuracy": 0.9968,
+    "majority_baseline": 0.8158
+  },
+  "seconds": 14.6
+}
