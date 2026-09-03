@@ -1,0 +1,33 @@
+{
+  "root": "D:\\datasets\\amdnet23",
+  "generated": "2026-09-03T10:21:07",
+  "n_images_raw": 1994,
+  "sources": {
+    "odir": 1349,
+    "bare": 322,
+    "other": 212,
+    "img": 88,
+    "aria": 23
+  },
+  "n_duplicate_groups": 138,
+  "n_removed": 145,
+  "n_crossclass_images": 0,
+  "n_patients": 1420,
+  "n_multiclass_patients": 44,
+  "n_distinct_dimensions": 751,
+  "n_images_final": 1849,
+  "patient_disjoint": true,
+  "class_counts": {
+    "NORMAL": 499,
+    "DIABETIC": 484,
+    "CATARACT": 478,
+    "AMD": 388
+  },
+  "split_counts": {
+    "train": 1180,
+    "val": 305,
+    "test": 364
+  },
+  "seed": 42,
+  "note": "classes kept at four; filter to NORMAL/AMD/DIABETIC in config for the three-class shared space with OCT"
+}
