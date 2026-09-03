@@ -69,6 +69,26 @@ def _geometry(image_size: int, strategy: str):
         # what the rejected pipeline did; kept so the distortion can be
         # quantified as an ablation
         return [A.Resize(height=image_size, width=image_size)]
+
+    if strategy == "normalize_768":
+        # Both cohorts pass through a common intermediate resolution before
+        # the network resize, so lateral sampling is uniform.
+        #
+        # Motivation: NEH is uniformly 768x496; Kermany spans 512/768/1024/
+        # 1536 x 496. Under resize_crop a 1536-wide scan loses 68% of its
+        # lateral field to the centre crop while a 512-wide one loses almost
+        # nothing -- the crop is far more destructive to one cohort than the
+        # other. Normalising first makes that loss uniform.
+        #
+        # Trade-off: an image already at 768x496 passes through untouched,
+        # while a 1536-wide one is downsampled 2x, adding its own
+        # cohort-correlated resampling signature. Whether this reduces the
+        # cohort probe is what the experiment measures.
+        return [
+            A.Resize(height=496, width=768),
+            A.SmallestMaxSize(max_size=image_size),
+            A.CenterCrop(height=image_size, width=image_size),
+        ]   
     raise ValueError(f"unknown resize strategy: {strategy!r}")
 
 
@@ -344,7 +364,7 @@ if __name__ == "__main__":
               f"{sub['patient_key'].nunique():>5} patients")
 
     print("\n  transforms:")
-    for strat in ("resize_crop", "pad", "squash"):
+    for strat in ("resize_crop", "pad", "squash", "normalize_768"):
         t = get_eval_transforms(strategy=strat)
         # exercise on the six real dimension variants
         for (w, h) in [(768, 496), (512, 496), (512, 512),

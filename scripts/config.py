@@ -126,7 +126,7 @@ class Config:
     #   "squash"      : plain resize to (IMAGE_SIZE, IMAGE_SIZE).
     #                   What the rejected pipeline did. Kept only so the
     #                   distortion can be quantified as an ablation.
-    RESIZE_STRATEGY = "pad"
+    RESIZE_STRATEGY = "normalize_768"  # "resize_crop" | "pad" | "squash" | "normalize_768"
 
     IMAGENET_MEAN = [0.485, 0.456, 0.406]
     IMAGENET_STD = [0.229, 0.224, 0.225]
@@ -314,7 +314,7 @@ class Config:
         if cls.PATIENCE <= cls.SCHEDULER_PATIENCE:
             problems.append("PATIENCE must exceed SCHEDULER_PATIENCE, "
                             "or early stopping fires before the LR drops")
-        if cls.RESIZE_STRATEGY not in ("resize_crop", "pad", "squash"):
+        if cls.RESIZE_STRATEGY not in ("resize_crop", "pad", "squash", "normalize_768"):
             problems.append(f"unknown RESIZE_STRATEGY {cls.RESIZE_STRATEGY!r}")
         if cls.TRAIN_MODE not in ("cached_probe", "linear_probe", "finetune"):
             problems.append(f"unknown TRAIN_MODE {cls.TRAIN_MODE!r}")
