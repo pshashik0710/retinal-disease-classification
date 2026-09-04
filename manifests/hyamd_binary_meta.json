@@ -1,0 +1,31 @@
+{
+  "root": "D:\\datasets\\hyamd",
+  "task": "binary",
+  "classes": [
+    "CONTROL",
+    "AMD"
+  ],
+  "generated": "2026-09-04T13:42:55",
+  "n_side_typos": 3,
+  "class_patients": {
+    "AMD": 135,
+    "CONTROL": 190
+  },
+  "n_multilabel_patients": 0,
+  "n_duplicates_removed": 0,
+  "n_distinct_dimensions": 2,
+  "n_images": 1560,
+  "n_patients": 325,
+  "n_eyes": 534,
+  "patient_disjoint": true,
+  "class_counts": {
+    "CONTROL": 1028,
+    "AMD": 532
+  },
+  "split_counts": {
+    "train": 1028,
+    "val": 232,
+    "test": 300
+  },
+  "seed": 42
+}
