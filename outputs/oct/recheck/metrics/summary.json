@@ -1,0 +1,81 @@
+{
+  "experiment": "recheck",
+  "finished": "2026-09-04T13:51:09",
+  "protocol": "cached linear probe (frozen ConvNeXt features)",
+  "hyperparams": {
+    "epochs_run": 18,
+    "max_epochs": 30,
+    "lr": 0.001,
+    "batch_size": 512,
+    "weight_decay": 0.0001,
+    "dropout": 0.0,
+    "label_smoothing": 0.1,
+    "class_weights": true,
+    "seed": 42
+  },
+  "data": {
+    "manifest": "D:\\Projects\\retinal-disease-classification\\manifests\\pooled_split.csv",
+    "n_train": 42838,
+    "n_val": 10244,
+    "n_test": 13372,
+    "classes": [
+      "NORMAL",
+      "DRUSEN",
+      "CNV",
+      "DME"
+    ]
+  },
+  "best_epoch": 11,
+  "val_at_best": {
+    "accuracy": 0.8712417024599766,
+    "balanced_accuracy": 0.8581017389497915,
+    "precision_macro": 0.8314609720014045,
+    "recall_macro": 0.8581017389497915,
+    "macro_f1": 0.8424190624622859,
+    "weighted_f1": 0.8735370877845179,
+    "roc_auc_ovr_macro": 0.9709812251307728,
+    "epoch": 11,
+    "val_loss": 0.7964592530642669,
+    "train_loss": 0.7195083194433727
+  },
+  "test": {
+    "accuracy": 0.861875560873467,
+    "balanced_accuracy": 0.8493898728152347,
+    "precision_macro": 0.8323754991710345,
+    "recall_macro": 0.8493898728152347,
+    "macro_f1": 0.8389678870394204,
+    "weighted_f1": 0.8647043177227499,
+    "per_class": {
+      "NORMAL": {
+        "precision": 0.9282390837508948,
+        "recall": 0.8957002244862718,
+        "f1": 0.9116794094384393,
+        "support": 5791
+      },
+      "DRUSEN": {
+        "precision": 0.6646966115051222,
+        "recall": 0.7872141857209519,
+        "f1": 0.7207861568041017,
+        "support": 2143
+      },
+      "CNV": {
+        "precision": 0.9239598278335724,
+        "recall": 0.8520772691188145,
+        "f1": 0.8865638766519823,
+        "support": 3779
+      },
+      "DME": {
+        "precision": 0.8126064735945485,
+        "recall": 0.8625678119349005,
+        "f1": 0.8368421052631579,
+        "support": 1659
+      }
+    },
+    "roc_auc_ovr_macro": 0.9687580310465269
+  },
+  "cohort_probe": {
+    "cohort_accuracy": 0.9961,
+    "majority_baseline": 0.8158
+  },
+  "seconds": 8.9
+}

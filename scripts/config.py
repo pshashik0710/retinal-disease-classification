@@ -38,24 +38,95 @@ class Config:
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
     MANIFEST_DIR = os.path.join(BASE_DIR, "manifests")
-    POOLED_MANIFEST = os.path.join(MANIFEST_DIR, "pooled_split.csv")
+    OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
 
-    # Dataset roots. The manifest's 'root_hint' column names which of these
-    # each row belongs to, so a row's absolute path is
-    # os.path.join(DATA_ROOTS[cohort], Directory).
-    DATA_ROOTS = {
-        "neh": r"D:\datasets\neh\NEH_UT_2021RetinalOCTDataset",
-        "kermany": r"D:\datasets\kermany2018\OCT2017",
+    # =====================================================================
+    # TRACK
+    # =====================================================================
+    #
+    # One config, several studies. A track fixes the manifest, the data
+    # roots, the class list and the preprocessing that suits that
+    # modality. Everything downstream -- dataset.py, cache_features.py,
+    # train.py -- reads Config and needs no changes.
+    #
+    # Set TRACK here, or override at the command line if a script exposes
+    # it. Feature caches and experiment outputs are namespaced by track,
+    # so switching cannot silently reuse the wrong vectors.
+    #
+    #   oct           pooled NEH + Kermany, 4-class B-scan  (the main study)
+    #   cfp_hyamd     HYAMD fundus, CONTROL vs AMD          (clean cohort)
+    #   cfp_hyamd3    HYAMD fundus, 3-class AMD staging     (thin early class)
+    #   cfp_amdnet23  AMDNet23 fundus, 4-class              (multi-source)
+    #
+    TRACK = "oct"
+
+    TRACKS = {
+        "oct": {
+            "manifest": "pooled_split.csv",
+            "classes": ["NORMAL", "DRUSEN", "CNV", "DME"],
+            "roots": {
+                "neh": r"D:\datasets\neh\NEH_UT_2021RetinalOCTDataset",
+                "kermany": r"D:\datasets\kermany2018\OCT2017",
+            },
+            # Six native aspect ratios (0.774-3.097). normalize_768 puts
+            # both cohorts through a common intermediate resolution so the
+            # centre crop costs them equally; measured equivalent to
+            # resize_crop (0.840 vs 0.835 macro-F1, inside 1.04 sd of seed
+            # noise) and clearly better than squash or pad.
+            "resize": "normalize_768",
+            "note": "pooled OCT B-scans; DME comes only from Kermany",
+        },
+        "cfp_hyamd": {
+            "manifest": "hyamd_binary.csv",
+            "classes": ["CONTROL", "AMD"],
+            "roots": {"hyamd": r"D:\datasets\hyamd"},
+            # Two export widths (2576 and 1960, both 1934 high) in the same
+            # proportion across all classes, so no class-correlated
+            # geometry. resize_crop is enough.
+            "resize": "resize_crop",
+            "note": ("HYAMD: single site, single Topcon camera, labels from "
+                     "full clinical evaluation with OCT. Controls are "
+                     "diabetic-retinopathy patients WITHOUT AMD, so "
+                     "'CONTROL' is not 'healthy'."),
+        },
+        "cfp_hyamd3": {
+            "manifest": "hyamd_staging.csv",
+            "classes": ["CONTROL", "AMD_EARLY", "AMD_LATE"],
+            "roots": {"hyamd": r"D:\datasets\hyamd"},
+            "resize": "resize_crop",
+            "note": ("AMD_EARLY has 20 patients (12/4/4 across splits). "
+                     "Secondary analysis only -- do not select a model on "
+                     "its metrics."),
+        },
+        "cfp_amdnet23": {
+            "manifest": "amdnet23_clean.csv",
+            "classes": ["NORMAL", "AMD", "DIABETIC", "CATARACT"],
+            "roots": {"amdnet23": r"D:\datasets\amdnet23"},
+            # 751 distinct sizes from six source datasets; no common
+            # intermediate resolution is meaningful.
+            "resize": "resize_crop",
+            "note": ("Compiled from six public datasets, and source is "
+                     "confounded with class: ARIA is 100% AMD, 'other' is "
+                     "99.5% cataract. Run the source probe and report per-"
+                     "source metrics, or restrict to ODIR."),
+        },
     }
 
-    OUTPUT_DIR = os.path.join(BASE_DIR, "outputs")
-    FEATURE_CACHE_DIR = os.path.join(BASE_DIR, "features")
+    # ---- resolved from TRACK ------------------------------------------
+    _T = TRACKS[TRACK]
+
+    POOLED_MANIFEST = os.path.join(MANIFEST_DIR, _T["manifest"])
+    DATA_ROOTS = _T["roots"]
+    TRACK_NOTE = _T["note"]
+
+    # Namespaced so an OCT cache can never be read as a CFP one.
+    FEATURE_CACHE_DIR = os.path.join(BASE_DIR, "features", TRACK)
 
     # =====================================================================
     # CLASSES  -- order is load-bearing, see module docstring
     # =====================================================================
 
-    CLASSES = ["NORMAL", "DRUSEN", "CNV", "DME"]
+    CLASSES = _T["classes"]
     CLASS_TO_IDX = {c: i for i, c in enumerate(CLASSES)}
     NUM_CLASSES = len(CLASSES)
 
@@ -99,10 +170,10 @@ class Config:
     DEVICE = "cuda" if _torch.cuda.is_available() else "cpu"
     del _torch
 
-    TORCH_NUM_THREADS = 8      # leave headroom for the dataloader workers
-    NUM_WORKERS = 0
+    TORCH_NUM_THREADS = 10      # leave headroom for the dataloader workers
+    NUM_WORKERS = 2
     PIN_MEMORY = False          # meaningless without CUDA
-    PERSISTENT_WORKERS = False  # only honoured when NUM_WORKERS > 0
+    PERSISTENT_WORKERS = True   # only honoured when NUM_WORKERS > 0
     PREFETCH_FACTOR = 2
     USE_AMP = False             # torch.amp autocast here is CUDA-only
 
@@ -126,7 +197,7 @@ class Config:
     #   "squash"      : plain resize to (IMAGE_SIZE, IMAGE_SIZE).
     #                   What the rejected pipeline did. Kept only so the
     #                   distortion can be quantified as an ablation.
-    RESIZE_STRATEGY = "normalize_768"  # "resize_crop" | "pad" | "squash" | "normalize_768"
+    RESIZE_STRATEGY = _T["resize"]
 
     IMAGENET_MEAN = [0.485, 0.456, 0.406]
     IMAGENET_STD = [0.229, 0.224, 0.225]
@@ -277,7 +348,10 @@ class Config:
 
     @classmethod
     def experiment_dir(cls, name: str | None = None) -> str:
-        return os.path.join(cls.OUTPUT_DIR, name or cls.EXPERIMENT_NAME)
+        # namespaced by track, so an OCT run and a CFP run of the same
+        # experiment name cannot overwrite each other
+        return os.path.join(cls.OUTPUT_DIR, cls.TRACK,
+                            name or cls.EXPERIMENT_NAME)
 
     @classmethod
     def paths(cls, name: str | None = None) -> dict:
@@ -309,12 +383,18 @@ class Config:
         """Fail fast on misconfiguration. Returns a list of problems."""
         problems = []
 
+        if cls.TRACK not in cls.TRACKS:
+            problems.append(f"unknown TRACK {cls.TRACK!r}; "
+                            f"valid: {sorted(cls.TRACKS)}")
         if cls.NUM_CLASSES != len(cls.CLASSES):
             problems.append("NUM_CLASSES does not match len(CLASSES)")
+        if len(set(cls.CLASSES)) != len(cls.CLASSES):
+            problems.append("CLASSES contains duplicates")
         if cls.PATIENCE <= cls.SCHEDULER_PATIENCE:
             problems.append("PATIENCE must exceed SCHEDULER_PATIENCE, "
                             "or early stopping fires before the LR drops")
-        if cls.RESIZE_STRATEGY not in ("resize_crop", "pad", "squash", "normalize_768"):
+        if cls.RESIZE_STRATEGY not in ("resize_crop", "pad", "squash",
+                                       "normalize_768"):
             problems.append(f"unknown RESIZE_STRATEGY {cls.RESIZE_STRATEGY!r}")
         if cls.TRAIN_MODE not in ("cached_probe", "linear_probe", "finetune"):
             problems.append(f"unknown TRAIN_MODE {cls.TRAIN_MODE!r}")
@@ -330,6 +410,26 @@ class Config:
         if check_data:
             if not os.path.isfile(cls.POOLED_MANIFEST):
                 problems.append(f"manifest not found: {cls.POOLED_MANIFEST}")
+            else:
+                # the manifest's cohorts must all have a configured root,
+                # or dataset.py cannot build absolute paths
+                import csv as _csv
+                with open(cls.POOLED_MANIFEST, newline="") as _f:
+                    _r = _csv.DictReader(_f)
+                    _cohorts, _labels = set(), set()
+                    for _i, _row in enumerate(_r):
+                        _cohorts.add(_row.get("cohort", ""))
+                        _labels.add(_row.get("y_label", ""))
+                        if _i > 20000:
+                            break
+                _miss = _cohorts - set(cls.DATA_ROOTS)
+                if _miss:
+                    problems.append(f"manifest has cohort(s) with no root: "
+                                    f"{sorted(_miss)}")
+                _bad = _labels - set(cls.CLASSES)
+                if _bad:
+                    problems.append(f"manifest has labels outside "
+                                    f"CLASSES: {sorted(_bad)}")
             for k, v in cls.DATA_ROOTS.items():
                 if not os.path.isdir(v):
                     problems.append(f"data root missing for '{k}': {v}")
@@ -342,6 +442,7 @@ class Config:
             "=" * 66,
             "CONFIGURATION",
             "=" * 66,
+            f"  TRACK           : {cls.TRACK}",
             f"  device          : {cls.DEVICE}",
             f"  torch threads   : {cls.TORCH_NUM_THREADS}",
             f"  train mode      : {cls.TRAIN_MODE}",
@@ -360,6 +461,7 @@ class Config:
             f"  best metric     : {cls.BEST_METRIC}",
             f"  experiment      : {cls.EXPERIMENT_NAME}",
             f"  manifest        : {cls.POOLED_MANIFEST}",
+            f"  cache           : {cls.FEATURE_CACHE_DIR}",
             "=" * 66,
         ]
         return "\n".join(lines)
@@ -379,4 +481,13 @@ if __name__ == "__main__":
 
     print(f"\n  experiment dir : {Config.experiment_dir()}")
     print(f"  feature cache  : {Config.feature_cache_path('train')}")
-    print(f"\n  {Config.COHORT_CONFOUND_NOTE}\n")
+    print(f"\n  track note: {Config.TRACK_NOTE}")
+    if Config.TRACK == "oct":
+        print(f"\n  {Config.COHORT_CONFOUND_NOTE}")
+
+    print(f"\n  available tracks:")
+    for _t, _c in Config.TRACKS.items():
+        _mark = " <-- active" if _t == Config.TRACK else ""
+        print(f"    {_t:<14} {_c['manifest']:<22} "
+              f"{len(_c['classes'])} classes{_mark}")
+    print()
