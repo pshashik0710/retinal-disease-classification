@@ -58,7 +58,7 @@ class Config:
     #   cfp_hyamd3    HYAMD fundus, 3-class AMD staging     (thin early class)
     #   cfp_amdnet23  AMDNet23 fundus, 4-class              (multi-source)
     #
-    TRACK = "oct"
+    TRACK = "cfp_hyamd"
 
     TRACKS = {
         "oct": {

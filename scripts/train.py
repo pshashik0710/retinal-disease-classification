@@ -124,12 +124,17 @@ def compute_metrics(y_true, y_pred, y_prob, n_classes):
     present = sorted(set(y_true.tolist()))
     if len(present) == n_classes:
         try:
-            m["roc_auc_ovr_macro"] = float(roc_auc_score(
-                y_true, y_prob, multi_class="ovr", average="macro",
-                labels=labels))
+            if n_classes == 2:
+                # binary: roc_auc_score wants the positive-class score
+                m["roc_auc_ovr_macro"] = float(roc_auc_score(
+                    y_true, y_prob[:, 1]))
+            else:
+                m["roc_auc_ovr_macro"] = float(roc_auc_score(
+                    y_true, y_prob, multi_class="ovr", average="macro",
+                    labels=labels))
         except ValueError as e:
             m["roc_auc_ovr_macro"] = None
-            m["roc_auc_note"] = str(e)
+            m["roc_auc_note"] = f"roc_auc_score error: {e}"
     else:
         m["roc_auc_ovr_macro"] = None
         m["roc_auc_note"] = (f"only {len(present)} of {n_classes} classes "
@@ -218,6 +223,11 @@ def save_curves(y_true, y_prob, roc_path, pr_path):
 
     labels = list(range(Config.NUM_CLASSES))
     yb = label_binarize(y_true, classes=labels)
+    # label_binarize collapses a 2-class problem to a single column; expand
+    # it back so the per-class loops below work for binary and multiclass
+    if yb.shape[1] == 1:
+        yb = np.hstack([1 - yb, yb])
+
 
     fig, ax = plt.subplots(figsize=(7, 6))
     for i in labels:
@@ -251,7 +261,7 @@ def save_curves(y_true, y_prob, roc_path, pr_path):
     plt.close(fig)
 
 
-def per_cohort_report(y_true, y_pred, idx, split, paths):
+def per_cohort_report(y_true, y_pred, idx, split, paths, group_col="cohort"):
     """
     Break the test metrics down by source cohort.
 
@@ -261,7 +271,7 @@ def per_cohort_report(y_true, y_pred, idx, split, paths):
     """
     df = load_manifest()
     sub = get_split(df, split).reset_index(drop=True)
-    cohorts = sub.loc[idx, "cohort"].to_numpy()
+    cohorts = sub.loc[idx, group_col].to_numpy()
 
     rows = []
     for coh in sorted(set(cohorts)):
@@ -297,19 +307,28 @@ def per_cohort_report(y_true, y_pred, idx, split, paths):
     return out
 
 
-def cohort_probe(Xtr, Xte, idx_tr, idx_te):
+def cohort_probe(Xtr, Xte, idx_tr, idx_te, group_col="cohort"):
     """
-    How separable are the two cohorts in feature space? A near-perfect
-    score means the domain gap is large, which is exactly the confound to
-    report for a class that exists in only one cohort.
+    How separable are the source groups in feature space? A near-perfect
+    score means the domain gap is large -- which matters most when a class
+    exists in only one group.
+
+    Multi-group problems are scored as multiclass accuracy against the
+    majority baseline.
     """
+
     from sklearn.linear_model import LogisticRegression
 
     df = load_manifest()
+    if group_col not in df.columns or df[group_col].nunique() < 2:
+        return None
+
     tr = get_split(df, "train").reset_index(drop=True)
     te = get_split(df, "test").reset_index(drop=True)
-    ytr = (tr.loc[idx_tr, "cohort"] == "kermany").to_numpy().astype(int)
-    yte = (te.loc[idx_te, "cohort"] == "kermany").to_numpy().astype(int)
+    groups = sorted(df[group_col].unique())
+    g2i = {g: i for i, g in enumerate(groups)}
+    ytr = tr.loc[idx_tr, group_col].map(g2i).to_numpy()
+    yte = te.loc[idx_te, group_col].map(g2i).to_numpy()
 
     if len(set(ytr)) < 2 or len(set(yte)) < 2:
         return None
@@ -317,10 +336,10 @@ def cohort_probe(Xtr, Xte, idx_tr, idx_te):
     clf = LogisticRegression(max_iter=1000)
     clf.fit(Xtr, ytr)
     acc = float(clf.score(Xte, yte))
-    base = float(max(np.mean(yte), 1 - np.mean(yte)))
-    return {"cohort_accuracy": round(acc, 4),
-            "majority_baseline": round(base, 4)}
-
+    counts = np.bincount(yte, minlength=len(groups))
+    base = float(counts.max() / counts.sum())
+    return {"group_column": group_col, "groups": groups,
+            "accuracy": round(acc, 4), "majority_baseline": round(base, 4)}
 
 # =========================================================================
 # MAIN
@@ -502,24 +521,35 @@ def main():
                 os.path.join(paths["plots"], "pr_test.png"))
 
     # -- cohort breakdown -------------------------------------------------
-    print(f"\n{'='*70}\nPER-COHORT BREAKDOWN\n{'='*70}")
-    print("  DME exists only in the Kermany cohort, so a pooled number can")
-    print("  hide the model keying on scanner rather than pathology.\n")
-    pc = per_cohort_report(tt, tp, ite, "test", paths)
-    print("    " + pc.to_string(index=False).replace("\n", "\n    "))
+    df_all = load_manifest()
+    group_col = "source" if ("source" in df_all.columns
+                             and df_all["source"].nunique() > 1) else "cohort"
+    n_groups = df_all[group_col].nunique()
+
+    if n_groups > 1:
+        print(f"\n{'='*70}\nPER-{group_col.upper()} BREAKDOWN\n{'='*70}")
+        print(f"  {Config.TRACK_NOTE}\n")
+        pc = per_cohort_report(tt, tp, ite, "test", paths, group_col)
+        print("    " + pc.to_string(index=False).replace("\n", "\n    "))
+    else:
+        print(f"\n{'='*70}\nPER-COHORT BREAKDOWN\n{'='*70}")
+        print(f"  Single cohort ({df_all['cohort'].iloc[0]}); no breakdown "
+              f"to report.")
+        print(f"  {Config.TRACK_NOTE}")
+        pc = None
 
     probe = None
-    if Config.RUN_COHORT_PROBE and not a.no_cohort_probe:
-        print(f"\n{'='*70}\nCOHORT PROBE\n{'='*70}")
-        probe = cohort_probe(Xtr, Xte, itr, ite)
+    if Config.RUN_COHORT_PROBE and not a.no_cohort_probe and n_groups > 1:
+        print(f"\n{'='*70}\n{group_col.upper()} PROBE\n{'='*70}")
+        probe = cohort_probe(Xtr, Xte, itr, ite, group_col)
         if probe:
-            print(f"  NEH vs Kermany from the same features: "
-                  f"{probe['cohort_accuracy']:.4f} "
+            print(f"  {' vs '.join(map(str, probe['groups']))} from the same "
+                  f"features: {probe['accuracy']:.4f} "
                   f"(majority baseline {probe['majority_baseline']:.4f})")
-            if probe["cohort_accuracy"] > 0.95:
-                print("  The cohorts are near-perfectly separable. Report "
-                      "this, and treat\n  DME performance as partly "
-                      "cohort-driven.")
+            if probe["accuracy"] > 0.95:
+                print(f"  Near-perfectly separable. Report this, and treat "
+                      f"any class confined\n  to one {group_col} as partly "
+                      f"{group_col}-driven.")
 
     # -- write everything out ---------------------------------------------
     pd.DataFrame(history).to_csv(

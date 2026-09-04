@@ -1,0 +1,4 @@
+cohort,class,n,precision,recall,f1
+hyamd,CONTROL,206,0.7337,0.7087,0.721
+hyamd,AMD,94,0.4059,0.4362,0.4205
+hyamd,MACRO (2 cls),300,0.5698,0.5725,0.5708
