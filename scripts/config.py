@@ -58,7 +58,7 @@ class Config:
     #   cfp_hyamd3    HYAMD fundus, 3-class AMD staging     (thin early class)
     #   cfp_amdnet23  AMDNet23 fundus, 4-class              (multi-source)
     #
-    TRACK = "cfp_amdnet23"
+    TRACK = "oct"
 
     TRACKS = {
         "oct": {
@@ -110,6 +110,23 @@ class Config:
                      "99.5% cataract. Run the source probe and report per-"
                      "source metrics, or restrict to ODIR."),
         },
+        "cfp_odir": {
+            # Same manifest as cfp_amdnet23, restricted to the one source
+            # that contributes all four classes. This is the confound-free
+            # comparison: in the full set, recognising 'other' predicts
+            # CATARACT at 99.5% and recognising 'aria' predicts AMD at
+            # 100%, and a linear probe recovers the source from the frozen
+            # features at 0.912 against a 0.684 baseline.
+            "manifest": "amdnet23_clean.csv",
+            "filter": {"source": ["odir"]},
+            "classes": ["NORMAL", "AMD", "DIABETIC", "CATARACT"],
+            "roots": {"amdnet23": r"D:\datasets\amdnet23"},
+            "resize": "resize_crop",
+            "note": ("AMDNet23 restricted to its ODIR-derived images: one "
+                     "acquisition source, all four classes, real patient "
+                     "ids. Compare against cfp_amdnet23 to see what the "
+                     "multi-source confound is worth."),
+        },
     }
 
     # ---- resolved from TRACK ------------------------------------------
@@ -118,6 +135,9 @@ class Config:
     POOLED_MANIFEST = os.path.join(MANIFEST_DIR, _T["manifest"])
     DATA_ROOTS = _T["roots"]
     TRACK_NOTE = _T["note"]
+    # Optional {column: [values]} restriction applied to the
+    # manifest at load time. Rows not matching are dropped.
+    MANIFEST_FILTER = _T.get("filter")
 
     # Namespaced so an OCT cache can never be read as a CFP one.
     FEATURE_CACHE_DIR = os.path.join(BASE_DIR, "features", TRACK)
@@ -170,7 +190,7 @@ class Config:
     DEVICE = "cuda" if _torch.cuda.is_available() else "cpu"
     del _torch
 
-    TORCH_NUM_THREADS = 6     # leave headroom for the dataloader workers
+    TORCH_NUM_THREADS = 10      # leave headroom for the dataloader workers
     NUM_WORKERS = 2
     PIN_MEMORY = False          # meaningless without CUDA
     PERSISTENT_WORKERS = True   # only honoured when NUM_WORKERS > 0

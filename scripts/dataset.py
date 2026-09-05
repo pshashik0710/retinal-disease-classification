@@ -69,26 +69,6 @@ def _geometry(image_size: int, strategy: str):
         # what the rejected pipeline did; kept so the distortion can be
         # quantified as an ablation
         return [A.Resize(height=image_size, width=image_size)]
-
-    if strategy == "normalize_768":
-        # Both cohorts pass through a common intermediate resolution before
-        # the network resize, so lateral sampling is uniform.
-        #
-        # Motivation: NEH is uniformly 768x496; Kermany spans 512/768/1024/
-        # 1536 x 496. Under resize_crop a 1536-wide scan loses 68% of its
-        # lateral field to the centre crop while a 512-wide one loses almost
-        # nothing -- the crop is far more destructive to one cohort than the
-        # other. Normalising first makes that loss uniform.
-        #
-        # Trade-off: an image already at 768x496 passes through untouched,
-        # while a 1536-wide one is downsampled 2x, adding its own
-        # cohort-correlated resampling signature. Whether this reduces the
-        # cohort probe is what the experiment measures.
-        return [
-            A.Resize(height=496, width=768),
-            A.SmallestMaxSize(max_size=image_size),
-            A.CenterCrop(height=image_size, width=image_size),
-        ]   
     raise ValueError(f"unknown resize strategy: {strategy!r}")
 
 
@@ -183,24 +163,11 @@ class OCTDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.paths[idx]
-
-        image = None
-        for attempt in range(3):
-            try:
-                with Image.open(path) as im:
-                    image = np.array(im.convert("RGB"))
-                break
-            except MemoryError:
-                # transient allocation failure under memory pressure --
-                # give the allocator a moment rather than losing the run
-                import gc, time as _t
-                gc.collect()
-                _t.sleep(0.5 * (attempt + 1))
-            except Exception as e:
-                raise RuntimeError(f"failed to read {path}: {e}") from e
-        if image is None:
-            raise RuntimeError(f"repeated MemoryError reading {path}; "
-                               f"reduce NUM_WORKERS or BATCH_SIZE")
+        try:
+            with Image.open(path) as im:
+                image = np.array(im.convert("RGB"))
+        except Exception as e:
+            raise RuntimeError(f"failed to read {path}: {e}") from e
 
         image = self.transform(image=image)["image"]
         label = int(self.labels[idx])
@@ -236,6 +203,24 @@ def load_manifest(path=None):
                  f"Run pool_manifests.py first.")
 
     df = pd.read_csv(path, low_memory=False)
+
+    # A track may restrict the manifest to a subset of rows -- e.g. cfp_odir
+    # keeps only the ODIR-derived images of AMDNet23, so the multi-source
+    # confound is absent. Applied here so every consumer (caching, training,
+    # evaluation) sees exactly the same rows.
+    filt = getattr(Config, "MANIFEST_FILTER", None)
+    if filt:
+        n0 = len(df)
+        for col, vals in filt.items():
+            if col not in df.columns:
+                sys.exit(f"ERROR: MANIFEST_FILTER names column {col!r}, "
+                         f"absent from {path}")
+            df = df[df[col].isin(vals)]
+        df = df.reset_index(drop=True)
+        if df.empty:
+            sys.exit(f"ERROR: MANIFEST_FILTER {filt} left no rows")
+        print(f"  manifest filter {filt}: {n0:,} -> {len(df):,} rows")
+
     missing = REQUIRED_COLUMNS - set(df.columns)
     if missing:
         sys.exit(f"ERROR: manifest missing columns: {sorted(missing)}")
@@ -285,19 +270,17 @@ def get_datasets(manifest_path=None, train_transform=None,
 # =========================================================================
 
 def seed_worker(worker_id):
-    """Seed numpy and random per worker, and cap threads.
+    """Seed numpy and random per worker.
 
-    On Windows, workers spawn as fresh processes that re-import torch and
-    pick up the default thread count -- with 2 workers that means three
-    processes each claiming ~12 threads on a 12-core machine. Workers only
-    decode and resize images, so one thread each is right.
+    torch seeds itself per worker, but numpy and python's random are not
+    reliably seeded under every start method, and the augmentation pipeline
+    draws from them.
     """
-
     import random
-    torch.set_num_threads(1)
     s = torch.initial_seed() % 2 ** 32
     np.random.seed(s)
     random.seed(s)
+
 
 def make_loader(dataset, shuffle, batch_size=None, seed=None):
     batch_size = batch_size or Config.BATCH_SIZE
@@ -364,7 +347,7 @@ if __name__ == "__main__":
               f"{sub['patient_key'].nunique():>5} patients")
 
     print("\n  transforms:")
-    for strat in ("resize_crop", "pad", "squash", "normalize_768"):
+    for strat in ("resize_crop", "pad", "squash"):
         t = get_eval_transforms(strategy=strat)
         # exercise on the six real dimension variants
         for (w, h) in [(768, 496), (512, 496), (512, 512),
