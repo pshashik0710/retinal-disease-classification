@@ -1,0 +1,26 @@
+cohort,class,n,precision,recall,f1
+aria,NORMAL,0,,,
+aria,AMD,2,1.0,1.0,1.0
+aria,DIABETIC,0,,,
+aria,CATARACT,0,,,
+aria,MACRO (1 cls),2,1.0,1.0,1.0
+bare,NORMAL,0,,,
+bare,AMD,21,0.9375,0.7143,0.8108
+bare,DIABETIC,40,0.907,0.975,0.9398
+bare,CATARACT,0,,,
+bare,MACRO (2 cls),61,0.9222,0.8446,0.8753
+img,NORMAL,0,,,
+img,AMD,6,0.8571,1.0,0.9231
+img,DIABETIC,0,,,
+img,CATARACT,11,1.0,0.9091,0.9524
+img,MACRO (2 cls),17,0.9286,0.9545,0.9377
+odir,NORMAL,98,0.9341,0.8673,0.8995
+odir,AMD,51,0.7377,0.8824,0.8036
+odir,DIABETIC,55,0.8182,0.8182,0.8182
+odir,CATARACT,45,0.9762,0.9111,0.9425
+odir,MACRO (4 cls),249,0.8665,0.8697,0.8659
+other,NORMAL,0,,,
+other,AMD,0,,,
+other,DIABETIC,0,,,
+other,CATARACT,35,1.0,1.0,1.0
+other,MACRO (1 cls),35,1.0,1.0,1.0

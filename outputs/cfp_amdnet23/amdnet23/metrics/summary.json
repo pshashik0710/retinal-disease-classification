@@ -1,0 +1,89 @@
+{
+  "experiment": "amdnet23",
+  "finished": "2026-09-04T19:10:38",
+  "protocol": "cached linear probe (frozen ConvNeXt features)",
+  "hyperparams": {
+    "epochs_run": 30,
+    "max_epochs": 30,
+    "lr": 0.001,
+    "batch_size": 512,
+    "weight_decay": 0.0001,
+    "dropout": 0.0,
+    "label_smoothing": 0.1,
+    "class_weights": true,
+    "seed": 42
+  },
+  "data": {
+    "manifest": "D:\\Projects\\retinal-disease-classification\\manifests\\amdnet23_clean.csv",
+    "n_train": 1180,
+    "n_val": 305,
+    "n_test": 364,
+    "classes": [
+      "NORMAL",
+      "AMD",
+      "DIABETIC",
+      "CATARACT"
+    ]
+  },
+  "best_epoch": 27,
+  "val_at_best": {
+    "accuracy": 0.8360655737704918,
+    "balanced_accuracy": 0.8310788089718919,
+    "precision_macro": 0.8335555756090942,
+    "recall_macro": 0.8310788089718919,
+    "macro_f1": 0.8315847573479151,
+    "weighted_f1": 0.8369995585087906,
+    "roc_auc_ovr_macro": 0.9676670029108347,
+    "epoch": 27,
+    "val_loss": 0.668793261051178,
+    "train_loss": 0.60906308343855
+  },
+  "test": {
+    "accuracy": 0.8406593406593407,
+    "balanced_accuracy": 0.84049151036933,
+    "precision_macro": 0.8420210686555575,
+    "recall_macro": 0.84049151036933,
+    "macro_f1": 0.8387327053925941,
+    "weighted_f1": 0.8404267028296256,
+    "per_class": {
+      "NORMAL": {
+        "precision": 0.839622641509434,
+        "recall": 0.9081632653061225,
+        "f1": 0.8725490196078431,
+        "support": 98
+      },
+      "AMD": {
+        "precision": 0.7252747252747253,
+        "recall": 0.825,
+        "f1": 0.7719298245614035,
+        "support": 80
+      },
+      "DIABETIC": {
+        "precision": 0.8148148148148148,
+        "recall": 0.6947368421052632,
+        "f1": 0.75,
+        "support": 95
+      },
+      "CATARACT": {
+        "precision": 0.9883720930232558,
+        "recall": 0.9340659340659341,
+        "f1": 0.96045197740113,
+        "support": 91
+      }
+    },
+    "roc_auc_ovr_macro": 0.966380076223532
+  },
+  "cohort_probe": {
+    "group_column": "source",
+    "groups": [
+      "aria",
+      "bare",
+      "img",
+      "odir",
+      "other"
+    ],
+    "accuracy": 0.9121,
+    "majority_baseline": 0.6841
+  },
+  "seconds": 1.3
+}
