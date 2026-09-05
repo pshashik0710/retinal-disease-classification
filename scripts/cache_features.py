@@ -138,7 +138,30 @@ def main():
     ap.add_argument("--overwrite", action="store_true")
     ap.add_argument("--print-every", type=int, default=20,
                     help="progress line every N batches")
+    ap.add_argument("--track", default=None,
+                    help="override Config.TRACK for this run, so the run "
+                         "and its output paths cannot disagree")
     args = ap.parse_args()
+
+    if args.track:
+        if args.track not in Config.TRACKS:
+            sys.exit(f"unknown track {args.track!r}; "
+                     f"valid: {sorted(Config.TRACKS)}")
+
+        _t = Config.TRACKS[args.track]
+        Config.TRACK = args.track
+        Config.POOLED_MANIFEST = os.path.join(Config.MANIFEST_DIR,
+                                              _t["manifest"])
+        Config.DATA_ROOTS = _t["roots"]
+        Config.CLASSES = _t["classes"]
+        Config.CLASS_TO_IDX = {c: i for i, c in enumerate(Config.CLASSES)}
+        Config.NUM_CLASSES = len(Config.CLASSES)
+        Config.RESIZE_STRATEGY = _t["resize"]
+        Config.TRACK_NOTE = _t["note"]
+        Config.MANIFEST_FILTER = _t.get("filter")
+        Config.FEATURE_CACHE_DIR = os.path.join(Config.BASE_DIR, "features",
+                                                args.track)
+
 
     args.batch_size = args.batch_size or Config.BATCH_SIZE
 

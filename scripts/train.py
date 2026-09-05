@@ -358,7 +358,28 @@ def main():
     ap.add_argument("--no-class-weights", action="store_true")
     ap.add_argument("--no-cohort-probe", action="store_true")
     ap.add_argument("--seed", type=int, default=None)
+
+    ap.add_argument("--track", default=None,
+                    help="override Config.TRACK for this run")
     a = ap.parse_args()
+
+    if a.track:
+        if a.track not in Config.TRACKS:
+            sys.exit(f"unknown track {a.track!r}; "
+                     f"valid: {sorted(Config.TRACKS)}")
+        _t = Config.TRACKS[a.track]
+        Config.TRACK = a.track
+        Config.POOLED_MANIFEST = os.path.join(Config.MANIFEST_DIR,
+                                              _t["manifest"])
+        Config.DATA_ROOTS = _t["roots"]
+        Config.CLASSES = _t["classes"]
+        Config.CLASS_TO_IDX = {c: i for i, c in enumerate(Config.CLASSES)}
+        Config.NUM_CLASSES = len(Config.CLASSES)
+        Config.RESIZE_STRATEGY = _t["resize"]
+        Config.TRACK_NOTE = _t["note"]
+        Config.MANIFEST_FILTER = _t.get("filter")
+        Config.FEATURE_CACHE_DIR = os.path.join(Config.BASE_DIR, "features",
+                                                a.track)
 
     name = a.experiment or Config.EXPERIMENT_NAME
     epochs = a.epochs or Config.EPOCHS
