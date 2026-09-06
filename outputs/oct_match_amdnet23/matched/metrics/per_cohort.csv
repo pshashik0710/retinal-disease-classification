@@ -1,0 +1,7 @@
+cohort,class,n,precision,recall,f1
+kermany,NORMAL,1236,0.8957,0.9798,0.9359
+kermany,AMD,1505,0.982,0.9063,0.9426
+kermany,MACRO (2 cls),2741,0.9389,0.943,0.9392
+neh,NORMAL,324,0.8223,0.8858,0.8529
+neh,AMD,532,0.927,0.8835,0.9047
+neh,MACRO (2 cls),856,0.8747,0.8846,0.8788

@@ -1,0 +1,72 @@
+{
+  "experiment": "matched_seed3",
+  "finished": "2026-09-06T23:30:38",
+  "protocol": "cached linear probe (frozen ConvNeXt features)",
+  "hyperparams": {
+    "epochs_run": 27,
+    "max_epochs": 30,
+    "lr": 0.001,
+    "batch_size": 512,
+    "weight_decay": 0.0001,
+    "dropout": 0.0,
+    "label_smoothing": 0.1,
+    "class_weights": true,
+    "seed": 3
+  },
+  "data": {
+    "manifest": "D:\\Projects\\retinal-disease-classification\\manifests\\oct_match_amdnet23.csv",
+    "n_train": 11947,
+    "n_val": 2598,
+    "n_test": 3597,
+    "classes": [
+      "NORMAL",
+      "AMD"
+    ]
+  },
+  "best_epoch": 20,
+  "val_at_best": {
+    "accuracy": 0.9230177059276367,
+    "balanced_accuracy": 0.9301534175019563,
+    "precision_macro": 0.9157012870657598,
+    "recall_macro": 0.9301534175019563,
+    "macro_f1": 0.9206366662267775,
+    "weighted_f1": 0.9236738146452067,
+    "roc_auc_ovr_macro": 0.9796539882070886,
+    "epoch": 20,
+    "val_loss": 0.34175318516245984,
+    "train_loss": 0.3115726958570834
+  },
+  "test": {
+    "accuracy": 0.9282735613010842,
+    "balanced_accuracy": 0.9324685623654696,
+    "precision_macro": 0.9259902059673049,
+    "recall_macro": 0.9324685623654696,
+    "macro_f1": 0.9276610027650183,
+    "weighted_f1": 0.9285437532837598,
+    "per_class": {
+      "NORMAL": {
+        "precision": 0.8815943728018757,
+        "recall": 0.9641025641025641,
+        "f1": 0.9210042865890998,
+        "support": 1560
+      },
+      "AMD": {
+        "precision": 0.970386039132734,
+        "recall": 0.9008345606283751,
+        "f1": 0.9343177189409368,
+        "support": 2037
+      }
+    },
+    "roc_auc_ovr_macro": 0.974737547675692
+  },
+  "cohort_probe": {
+    "group_column": "cohort",
+    "groups": [
+      "kermany",
+      "neh"
+    ],
+    "accuracy": 0.995,
+    "majority_baseline": 0.762
+  },
+  "seconds": 5.3
+}
