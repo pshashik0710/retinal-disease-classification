@@ -57,7 +57,7 @@ def load_track(track, splits=("train", "test")):
     tag = f"{Config.MODEL_NAME}_{Config.IMAGE_SIZE}_{t['resize']}"
     man_path = os.path.join(Config.MANIFEST_DIR, t["manifest"])
 
-    keep = ["split", "cohort", "patient_key", "width", "height", "y_label"]
+    keep = ["split", "cohort", "source", "patient_key", "width", "height", "y_label"]
     man = pd.concat(
         [c for c in pd.read_csv(man_path, chunksize=20000,
                                 usecols=lambda x: x in keep)],
@@ -91,6 +91,9 @@ def main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--track", default="oct")
+    p.add_argument("--group-col", default=None,
+                   help="column defining the groups; defaults to 'source' "
+                        "when the manifest has more than one, else 'cohort'")
     p.add_argument("--shuffles", type=int, default=10)
     p.add_argument("--out", default="reports/probe_controls.json")
     a = p.parse_args()
@@ -99,12 +102,22 @@ def main():
     Xtr, mtr = data["train"]
     Xte, mte = data["test"]
 
-    ytr = (mtr["cohort"] == "kermany").to_numpy().astype(int)
-    yte = (mte["cohort"] == "kermany").to_numpy().astype(int)
+    gcol = a.group_col
+    if gcol is None:
+        gcol = ("source" if ("source" in mtr.columns
+                             and mtr["source"].nunique() > 1) else "cohort")
+    if mtr[gcol].nunique() < 2:
+        sys.exit(f"track {a.track!r} has a single {gcol}; there is no group "
+                 f"probe to validate here.")
+    groups = sorted(set(mtr[gcol]) | set(mte[gcol]))
+    g2i = {g: i for i, g in enumerate(groups)}
+    ytr = mtr[gcol].map(g2i).to_numpy()
+    yte = mte[gcol].map(g2i).to_numpy()
+    print(f"  grouping by '{gcol}': {groups}")
 
     print(f"\n{'='*72}\nPROBE CONTROLS  (track: {a.track})\n{'='*72}")
     print(f"  train {Xtr.shape}   test {Xte.shape}")
-    print(f"  cohorts: {dict(mtr['cohort'].value_counts())}")
+    print(f"  {gcol}: {dict(mtr[gcol].value_counts())}")
 
     res = {}
 
@@ -143,7 +156,9 @@ def main():
     print(f"  baseline      : {base:.4f}")
     z = (te_acc - m) / s if s > 0 else float("inf")
     print(f"\n  separation    : {z:.1f} sd above the shuffled control")
-    if m < base + 0.05 and te_acc > 0.95:
+    # the control passes when the shuffle collapses to (or below) the
+    # majority baseline while the real labels stay clearly above it
+    if m <= base + 0.05 and te_acc > base + 0.10 and z > 5:
         print(f"\n  VERDICT: the shuffled control collapses to roughly the")
         print(f"  majority baseline while the real labels score {te_acc:.3f}.")
         print(f"  The cohort signal is genuine, not a pipeline artifact.")
