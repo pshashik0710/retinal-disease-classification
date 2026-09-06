@@ -1,0 +1,100 @@
+{
+  "OCT_to_CFP": {
+    "n_train": 58224,
+    "n_test": 745,
+    "majority_baseline": 0.6685,
+    "accuracy": 0.3517,
+    "balanced_accuracy": 0.4671,
+    "macro_f1": 0.3286,
+    "auc": 0.4637,
+    "auc_lo": 0.4174,
+    "auc_hi": 0.51,
+    "macro_f1_lo": 0.2977,
+    "macro_f1_hi": 0.3601,
+    "confusion": [
+      [
+        62,
+        436
+      ],
+      [
+        47,
+        200
+      ]
+    ]
+  },
+  "CFP_to_OCT": {
+    "n_train": 745,
+    "n_test": 58224,
+    "majority_baseline": 0.5117,
+    "accuracy": 0.488,
+    "balanced_accuracy": 0.4996,
+    "macro_f1": 0.332,
+    "auc": 0.5585,
+    "auc_lo": 0.554,
+    "auc_hi": 0.5634,
+    "macro_f1_lo": 0.3301,
+    "macro_f1_hi": 0.334,
+    "confusion": [
+      [
+        140,
+        29654
+      ],
+      [
+        158,
+        28272
+      ]
+    ]
+  },
+  "OCT_within": {
+    "accuracy": 0.9473,
+    "balanced_accuracy": 0.9468,
+    "macro_f1": 0.9472,
+    "auc": 0.9853,
+    "accuracy_lo": 0.9439,
+    "accuracy_hi": 0.9506,
+    "balanced_accuracy_lo": 0.9433,
+    "balanced_accuracy_hi": 0.9499,
+    "macro_f1_lo": 0.9438,
+    "macro_f1_hi": 0.9504,
+    "auc_lo": 0.9837,
+    "auc_hi": 0.9868
+  },
+  "CFP_within": {
+    "accuracy": 0.9437,
+    "balanced_accuracy": 0.9396,
+    "macro_f1": 0.9384,
+    "auc": 0.9893,
+    "accuracy_lo": 0.9134,
+    "accuracy_hi": 0.9697,
+    "balanced_accuracy_lo": 0.9022,
+    "balanced_accuracy_hi": 0.9677,
+    "macro_f1_lo": 0.9032,
+    "macro_f1_hi": 0.9664,
+    "auc_lo": 0.9788,
+    "auc_hi": 0.9966
+  },
+  "modality_probe": {
+    "accuracy": 1.0,
+    "majority_baseline": 0.9811
+  },
+  "_meta": {
+    "oct_track": "oct",
+    "cfp_track": "cfp_odir",
+    "bootstrap": 1000,
+    "shared_classes": [
+      "NORMAL",
+      "AMD"
+    ],
+    "mapping": {
+      "oct": {
+        "NORMAL": "NORMAL",
+        "DRUSEN": "AMD",
+        "CNV": "AMD"
+      },
+      "cfp_odir": {
+        "NORMAL": "NORMAL",
+        "AMD": "AMD"
+      }
+    }
+  }
+}
