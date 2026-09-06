@@ -1,0 +1,94 @@
+{
+  "generated": "2026-09-06T22:08:31",
+  "source": "D:\\Projects\\retinal-disease-classification\\manifests\\pooled_split.csv",
+  "seed": 42,
+  "cap": 0,
+  "shared_classes": [
+    "NORMAL",
+    "AMD"
+  ],
+  "collapse": {
+    "NORMAL": "NORMAL",
+    "DRUSEN": "AMD",
+    "CNV": "AMD"
+  },
+  "cfp_cohorts": {
+    "amdnet23": {
+      "patients": 1420,
+      "images": 1849,
+      "manifest": "amdnet23_clean.csv",
+      "filter": null
+    },
+    "odir": {
+      "patients": 879,
+      "images": 1303,
+      "manifest": "amdnet23_clean.csv",
+      "filter": {
+        "source": [
+          "odir"
+        ]
+      }
+    },
+    "hyamd": {
+      "patients": 325,
+      "images": 1560,
+      "manifest": "hyamd_binary.csv",
+      "filter": null
+    }
+  },
+  "fundus_patient_union": 1745,
+  "subsets": {
+    "amdnet23": {
+      "file": "D:\\Projects\\retinal-disease-classification\\manifests\\oct_match_amdnet23.csv",
+      "oct_patients": 1420,
+      "oct_images": 18142,
+      "target_patients": 1420,
+      "target_images": 1849,
+      "classes": {
+        "AMD": 10225,
+        "NORMAL": 7917
+      },
+      "splits": {
+        "train": 11947,
+        "test": 3597,
+        "val": 2598
+      },
+      "disjoint": true
+    },
+    "odir": {
+      "file": "D:\\Projects\\retinal-disease-classification\\manifests\\oct_match_odir.csv",
+      "oct_patients": 879,
+      "oct_images": 10416,
+      "target_patients": 879,
+      "target_images": 1303,
+      "classes": {
+        "AMD": 5271,
+        "NORMAL": 5145
+      },
+      "splits": {
+        "train": 6946,
+        "test": 1958,
+        "val": 1512
+      },
+      "disjoint": true
+    },
+    "hyamd": {
+      "file": "D:\\Projects\\retinal-disease-classification\\manifests\\oct_match_hyamd.csv",
+      "oct_patients": 325,
+      "oct_images": 4206,
+      "target_patients": 325,
+      "target_images": 1560,
+      "classes": {
+        "AMD": 2729,
+        "NORMAL": 1477
+      },
+      "splits": {
+        "train": 2967,
+        "val": 633,
+        "test": 606
+      },
+      "disjoint": true
+    }
+  },
+  "nested": "each subset is contained in the next larger one"
+}

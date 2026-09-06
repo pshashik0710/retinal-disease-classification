@@ -69,6 +69,22 @@ def _geometry(image_size: int, strategy: str):
         # what the rejected pipeline did; kept so the distortion can be
         # quantified as an ablation
         return [A.Resize(height=image_size, width=image_size)]
+
+    if strategy == "normalize_768":
+        # Both cohorts pass through a common intermediate resolution before
+        # the network resize, so lateral sampling is uniform.
+        #
+        # NEH is uniformly 768x496; Kermany spans 512/768/1024/1536 x 496.
+        # Under resize_crop a 1536-wide scan loses 68% of its lateral field
+        # to the centre crop while a 512-wide one loses almost nothing --
+        # the crop is far more destructive to one cohort than the other.
+        # Normalising first makes that loss uniform.
+        return [
+            A.Resize(height=496, width=768),
+            A.SmallestMaxSize(max_size=image_size),
+            A.CenterCrop(height=image_size, width=image_size),
+        ]
+    
     raise ValueError(f"unknown resize strategy: {strategy!r}")
 
 
@@ -163,11 +179,23 @@ class OCTDataset(Dataset):
 
     def __getitem__(self, idx):
         path = self.paths[idx]
-        try:
-            with Image.open(path) as im:
-                image = np.array(im.convert("RGB"))
-        except Exception as e:
-            raise RuntimeError(f"failed to read {path}: {e}") from e
+        image = None
+        for attempt in range(3):
+            try:
+                with Image.open(path) as im:
+                    image = np.array(im.convert("RGB"))
+                break
+            except MemoryError:
+                # transient allocation failure under memory pressure --
+                # give the allocator a moment rather than losing the run
+                import gc, time as _t
+                gc.collect()
+                _t.sleep(0.5 * (attempt + 1))
+            except Exception as e:
+                raise RuntimeError(f"failed to read {path}: {e}") from e
+        if image is None:
+            raise RuntimeError(f"repeated MemoryError reading {path}; "
+                               f"reduce NUM_WORKERS or BATCH_SIZE")
 
         image = self.transform(image=image)["image"]
         label = int(self.labels[idx])
@@ -347,7 +375,7 @@ if __name__ == "__main__":
               f"{sub['patient_key'].nunique():>5} patients")
 
     print("\n  transforms:")
-    for strat in ("resize_crop", "pad", "squash"):
+    for strat in ("resize_crop", "pad", "squash", "normalize_768"):
         t = get_eval_transforms(strategy=strat)
         # exercise on the six real dimension variants
         for (w, h) in [(768, 496), (512, 496), (512, 512),

@@ -127,6 +127,39 @@ class Config:
                      "ids. Compare against cfp_amdnet23 to see what the "
                      "multi-source confound is worth."),
         },
+
+         "oct_match_hyamd": {
+            "manifest": "oct_match_hyamd.csv",
+            "classes": ["NORMAL", "AMD"],
+            "roots": {
+                "neh": r"D:\datasets\neh\NEH_UT_2021RetinalOCTDataset",
+                "kermany": r"D:\datasets\kermany2018\OCT2017",
+            },
+            "resize": "normalize_768",
+            "note": "Patient-count matched OCT subset for comparison with HYAMD (325 patients).",
+        },
+
+        "oct_match_odir": {
+            "manifest": "oct_match_odir.csv",
+            "classes": ["NORMAL", "AMD"],
+            "roots": {
+                "neh": r"D:\datasets\neh\NEH_UT_2021RetinalOCTDataset",
+                "kermany": r"D:\datasets\kermany2018\OCT2017",
+            },
+            "resize": "normalize_768",
+            "note": "Patient-count matched OCT subset for comparison with ODIR (879 patients).",
+        },
+
+        "oct_match_amdnet23": {
+            "manifest": "oct_match_amdnet23.csv",
+            "classes": ["NORMAL", "AMD"],
+            "roots": {
+                "neh": r"D:\datasets\neh\NEH_UT_2021RetinalOCTDataset",
+                "kermany": r"D:\datasets\kermany2018\OCT2017",
+            },
+            "resize": "normalize_768",
+            "note": "Patient-count matched OCT subset for comparison with AMDNet23 (1,420 patients).",
+        },
     }
 
     # ---- resolved from TRACK ------------------------------------------
