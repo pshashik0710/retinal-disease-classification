@@ -238,6 +238,11 @@ def main():
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--manifest", default=None)
+    p.add_argument("--data-root", action="append", default=None,
+               metavar="COHORT=PATH",
+               help="override a cohort's image root, repeatable. "
+                    "Config's roots are Windows paths and do not exist "
+                    "on Kaggle.")
     p.add_argument("--out", default=None, help="checkpoint / sample dir")
     p.add_argument("--epochs", type=int, default=60)
     p.add_argument("--decay-start", type=int, default=None,
@@ -279,6 +284,21 @@ def main():
     out_dir = a.out or os.path.join(Config.BASE_DIR, "outputs",
                                     "harmonization")
     os.makedirs(out_dir, exist_ok=True)
+
+    roots = dict(Config.DATA_ROOTS)
+    for spec in (a.data_root or []):
+        if "=" not in spec:
+            sys.exit(f"--data-root expects COHORT=PATH, got {spec!r}")
+        k, v = spec.split("=", 1)
+        roots[k] = v
+
+    missing = [f"{k} -> {v}" for k, v in roots.items()
+           if not os.path.isdir(v)]
+    
+    if missing:
+        sys.exit("image roots not found:\n  " + "\n  ".join(missing)
+             + "\nPass --data-root COHORT=PATH for each.")
+    
     ckpt_path = os.path.join(out_dir, "latest.pth")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -302,7 +322,7 @@ def main():
 
     # ------------------------------------------------------------ data
     print(f"\n{'='*72}\nDATA\n{'='*72}")
-    domains = load_domains(manifest, Config.DATA_ROOTS, a.seed)
+    domains = load_domains(manifest, roots, a.seed)
     names = sorted(domains)
     print(f"\n  translating {names[0]} <-> {names[1]}")
     print(f"  domains are balanced per epoch by subsampling the larger one")
@@ -398,8 +418,8 @@ def main():
 
     for epoch in range(start_epoch, a.epochs):
         pa, pb, na, nb = balanced_epoch_paths(domains, rng)
-        ds_A = DomainDataset(pa, Config.DATA_ROOTS, a.image_size)
-        ds_B = DomainDataset(pb, Config.DATA_ROOTS, a.image_size)
+        ds_A = DomainDataset(pa, roots, a.image_size)
+        ds_B = DomainDataset(pb, roots, a.image_size)
 
         if a.smoke:
             ds_A.paths = ds_A.paths[:8]
