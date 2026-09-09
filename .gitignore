@@ -87,3 +87,4 @@ desktop.ini
 *.lnk
 .vscode/
 .idea/
+/checkpoints/ 
