@@ -1,0 +1,35 @@
+{
+  "finished": "2026-09-19T16:10:15",
+  "device": "cuda",
+  "domains": [
+    "kermany",
+    "neh"
+  ],
+  "epochs": 12,
+  "iterations": 12036,
+  "seconds": 10481.5,
+  "args": {
+    "manifest": null,
+    "data_root": [
+      "kermany=/kaggle/working/kermany_root",
+      "neh=/kaggle/input/datasets/pshashiraj/neh-cleaned-12565"
+    ],
+    "out": "outputs/cyclegan_run1",
+    "epochs": 12,
+    "decay_start": 6,
+    "image_size": 128,
+    "batch_size": 8,
+    "blocks": 6,
+    "lr": 0.0002,
+    "lambda_cycle": 10.0,
+    "lambda_identity": 5.0,
+    "pool_size": 50,
+    "workers": 2,
+    "save_every": 500,
+    "sample_every": 500,
+    "seed": 42,
+    "smoke": false
+  },
+  "manifest": "/kaggle/working/retinal-disease-classification/manifests/pooled_split.csv",
+  "note": "trained on split == 'train' only; val and test were never seen by the GAN"
+}
