@@ -76,6 +76,32 @@ class Config:
             "resize": "normalize_768",
             "note": "pooled OCT B-scans; DME comes only from Kermany",
         },
+
+        "oct_resized_baseline": {
+            "manifest": "pooled_translated_neh.csv",
+            "classes": ["NORMAL", "DRUSEN", "CNV", "DME"],
+            "roots": {"translated": os.environ.get(
+                "OCT_BASELINE_ROOT", "/kaggle/working/baseline_resized")},
+            "resize": "resize_crop",
+            "note": ("EP012 resized-only OCT baseline corresponding to the "
+                     "CycleGAN harmonisation experiment. Same manifest, "
+                     "patient-disjoint splits and 128px resolution, but "
+                     "without CycleGAN translation. Set OCT_BASELINE_ROOT "
+                     "to the baseline_resized directory."),
+        },
+
+        "oct_translated": {
+            "manifest": "pooled_translated_neh.csv",
+            "classes": ["NORMAL", "DRUSEN", "CNV", "DME"],
+            "roots": {"translated": os.environ.get(
+                "OCT_TRANSLATED_ROOT", "/kaggle/working/translated_neh")},
+            "resize": "resize_crop",
+            "note": ("EP012 Kermany->NEH CycleGAN translation. Kermany "
+                     "images translated with generators_ep012.pth; NEH "
+                     "resized only. Set OCT_TRANSLATED_ROOT to the "
+                     "translated_neh directory. Images are 128px."),
+        },
+
         "cfp_hyamd": {
             "manifest": "hyamd_binary.csv",
             "classes": ["CONTROL", "AMD"],
