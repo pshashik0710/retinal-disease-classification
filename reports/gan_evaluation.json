@@ -1,0 +1,53 @@
+{
+  "convnext_fid": {
+    "real_neh vs itself (floor)": 30.68,
+    "real_kermany vs real_neh (untranslated gap)": 191.67,
+    "trans_kermany vs real_neh (after translation)": 466.25,
+    "trans_kermany vs real_kermany (drift from source)": 413.46
+  },
+  "fid_reduction_pct": -143.3,
+  "cycle_l1": {
+    "kermany_train": 0.0448,
+    "kermany_test": 0.0443,
+    "neh_train": 0.0341,
+    "neh_test": 0.0365
+  },
+  "memorisation": {
+    "median_translated_to_real": 0.2084,
+    "median_real_to_real": 0.0392,
+    "ratio": 5.313,
+    "min_translated_to_real": 0.0627
+  },
+  "intensity": {
+    "real kermany": {
+      "mean": 0.1893,
+      "sd": 0.1984
+    },
+    "real neh": {
+      "mean": 0.1286,
+      "sd": 0.1956
+    },
+    "translated kermany": {
+      "mean": 0.1113,
+      "sd": 0.1763
+    }
+  },
+  "_meta": {
+    "generated": "2026-09-20T07:29:44",
+    "checkpoint": "/kaggle/input/datasets/pshashiraj/cyclegan-ep012/generators_ep012.pth",
+    "checkpoint_epoch": 12,
+    "domains": [
+      "kermany",
+      "neh"
+    ],
+    "n_fid": 2000,
+    "n_cycle": 300,
+    "fid_note": "ConvNeXt features, not Inception; not comparable to published FID values"
+  },
+  "convnext_fid_matched_resolution": {
+    "resized_neh vs itself (floor)": 29.22,
+    "resized_kermany vs resized_neh (untranslated gap)": 258.08,
+    "trans_kermany vs resized_neh (after translation)": 323.52,
+    "note": "both sides through the same 128px resize; the unmatched rows above compare translated images against full-resolution reals, which confounds resolution with translation"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "finding": "EP012 CycleGAN (kermany->neh) did not reduce cohort separability; translation moved Kermany away from NEH in ConvNeXt feature space",
+  "checkpoint": "generators_ep012.pth (epoch 12, 128px, blocks 6, seed 42)",
+  "cohort_probe": {
+    "oct_resized_baseline": {
+      "train": 0.9998,
+      "test": 0.9984
+    },
+    "oct_translated": {
+      "train": 1.0,
+      "test": 0.9996
+    },
+    "majority_baseline": 0.8158,
+    "note": "identical manifest, splits, 128px resize and frozen ConvNeXt-Tiny; only difference is passage through the generator"
+  },
+  "fid_matched_resolution": {
+    "floor_resized_neh_vs_itself": 29.22,
+    "untranslated_gap": 258.08,
+    "after_translation": 323.52
+  },
+  "limitation": "Kermany and NEH differ simultaneously in device, export resolution, file format, site, population and labelling practice; this supports a claim about cohort information, not scanner bias specifically"
+}
