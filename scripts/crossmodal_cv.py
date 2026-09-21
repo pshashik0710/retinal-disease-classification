@@ -39,10 +39,19 @@ describes spread across folds, not a standard error. A naive paired t-test
 over folds overstates significance; use a corrected resampled test if a
 p-value is required.
 
+Task-matched variant (--oct-map amd_dme): OCT's negative class becomes DME
+instead of NORMAL, mirroring HYAMD, whose CONTROL class is diabetic
+retinopathy without AMD. DME exists only in Kermany, and Kermany vs NEH is
+linearly separable at 0.996, so pair it with --oct-cohort kermany or the
+task is confounded with cohort. --drop-mixed removes groups whose images
+carry both classes after mapping. The defaults reproduce the original
+AMD-vs-NORMAL runs exactly.
+
 Usage:
     python scripts/crossmodal_cv.py                           # HYAMD
     python scripts/crossmodal_cv.py --cfp-track cfp_odir      # healthy NORMAL
     python scripts/crossmodal_cv.py --cfp-track cfp_amdnet23
+    python scripts/crossmodal_cv.py --oct-map amd_dme --oct-cohort kermany --drop-mixed
 """
 
 from __future__ import annotations
@@ -78,6 +87,13 @@ CONDITIONS = ["train_OCT", "train_CFP", "within_OCT", "within_CFP",
 PAIRS = {"OCT_to_CFP": "within_CFP",      # scored on the same CFP fold
          "CFP_to_OCT": "within_OCT"}      # scored on the same OCT fold
 
+# OCT label maps into the shared space. "NORMAL" is the shared token for
+# the negative class (index 0); for amd_dme that negative class is DME.
+OCT_MAPS = {
+    "amd_normal": {"NORMAL": "NORMAL", "DRUSEN": "AMD", "CNV": "AMD"},
+    "amd_dme":    {"DME": "NORMAL", "DRUSEN": "AMD", "CNV": "AMD"},
+}
+
 
 def load_track(track):
     """Cached features for every split, with the label and group per row."""
@@ -93,7 +109,7 @@ def load_track(track):
     # chunked, few columns: the full read has exhausted the Windows commit
     # limit on this machine before
     filt = t.get("filter") or {}
-    keep = {"split", "y_label", "patient_key", "group_key", *filt}
+    keep = {"split", "y_label", "patient_key", "group_key", "cohort", *filt}
     man = pd.concat([c for c in pd.read_csv(man_path, chunksize=20000,
                                             usecols=lambda x: x in keep)],
                     ignore_index=True)
@@ -102,7 +118,7 @@ def load_track(track):
     man = man.reset_index(drop=True)
     gcol = "group_key" if "group_key" in man.columns else "patient_key"
 
-    X, y, g = [], [], []
+    X, y, g, c = [], [], [], []
     for sp in ("train", "val", "test"):
         f = os.path.join(cache_dir, f"{tag}_{sp}.npz")
         if not os.path.isfile(f):
@@ -110,19 +126,31 @@ def load_track(track):
                      f"Run: python scripts/cache_features.py --track {track}")
         d = np.load(f)
         sub = man[man["split"] == sp].reset_index(drop=True)
+        rows = sub.loc[d["index"]]
         X.append(d["features"])
-        y.append(sub.loc[d["index"], "y_label"].to_numpy())
-        g.append(sub.loc[d["index"], gcol].astype(str).to_numpy())
-    return np.concatenate(X), np.concatenate(y), np.concatenate(g), gcol
+        y.append(rows["y_label"].to_numpy())
+        g.append(rows[gcol].astype(str).to_numpy())
+        c.append(rows["cohort"].astype(str).to_numpy()
+                 if "cohort" in rows.columns
+                 else np.full(len(rows), track, dtype=object))
+    return (np.concatenate(X), np.concatenate(y), np.concatenate(g), gcol,
+            np.concatenate(c))
 
 
-def to_binary(track, X, y_raw, g):
-    """Keep rows that map into the shared space; NORMAL=0, AMD=1."""
-    s = to_shared(track, y_raw)
+def to_binary(mapping, X, y_raw, g, coh):
+    """Keep rows that map into the shared space; negative=0, AMD=1."""
+    s = np.array([mapping.get(l) for l in y_raw], dtype=object)
     keep = s != None                                   # noqa: E711
-    c2i = {c: i for i, c in enumerate(CLASSES)}
+    c2i = {name: i for i, name in enumerate(CLASSES)}
     y = np.array([c2i[v] for v in s[keep]], dtype=int)
-    return X[keep], y, g[keep], sorted(set(y_raw[~keep]))
+    return X[keep], y, g[keep], coh[keep], sorted(set(y_raw[~keep]))
+
+
+def mixed_mask(y, g):
+    """Mask keeping only groups whose images all share one label."""
+    n = pd.Series(y).groupby(pd.Series(g)).nunique()
+    bad = set(n.index[n > 1])
+    return np.array([x not in bad for x in g]), len(bad)
 
 
 def assign_folds(y, g, k, seed):
@@ -168,34 +196,78 @@ def main():
     p.add_argument("--cfp-track", default="cfp_hyamd")
     p.add_argument("--folds", type=int, default=5)
     p.add_argument("--seed", type=int, default=Config.SEED)
+    p.add_argument("--oct-map", default="amd_normal", choices=sorted(OCT_MAPS),
+                   help="amd_normal: NORMAL vs DRUSEN+CNV (default); "
+                        "amd_dme: DME vs DRUSEN+CNV, task-matched to HYAMD")
+    p.add_argument("--oct-cohort", default=None,
+                   help="restrict OCT to one cohort, e.g. kermany")
+    p.add_argument("--drop-mixed", action="store_true",
+                   help="drop groups whose images carry both classes "
+                        "after mapping")
     p.add_argument("--out", default=None)
     a = p.parse_args()
-    out = a.out or f"reports/crossmodal_cv_{a.cfp_track}.json"
+
+    tags = [t for t, on in ((a.oct_map, a.oct_map != "amd_normal"),
+                            (a.oct_cohort, bool(a.oct_cohort)),
+                            ("nomixed", a.drop_mixed)) if on]
+    out = a.out or (f"reports/crossmodal_cv_{a.cfp_track}"
+                    f"{''.join('_' + t for t in tags)}.json")
+    oct_mapping = OCT_MAPS[a.oct_map]
+    if a.cfp_track not in SHARED:
+        sys.exit(f"no shared-space mapping for CFP track {a.cfp_track!r}")
+    cfp_mapping = SHARED[a.cfp_track]
+    neg = {"OCT": sorted(k for k, v in oct_mapping.items() if v == "NORMAL"),
+           "CFP": sorted(k for k, v in cfp_mapping.items() if v == "NORMAL")}
 
     print(f"\n{'='*78}\nCROSS-MODAL TRANSFER, {a.folds}-FOLD GROUP-DISJOINT\n"
           f"{'='*78}")
-    print(f"  OCT track : {a.oct_track}\n  CFP track : {a.cfp_track}\n"
-          f"  seed      : {a.seed}")
+    print(f"  OCT track : {a.oct_track}   map {a.oct_map}   "
+          f"cohort {a.oct_cohort or 'all'}")
+    print(f"  CFP track : {a.cfp_track}")
+    print(f"  negative  : OCT {neg['OCT']}   CFP {neg['CFP']}")
+    print(f"  mixed     : {'dropped' if a.drop_mixed else 'kept'}   "
+          f"seed {a.seed}")
 
-    Xo, yo_raw, go, gco = load_track(a.oct_track)
-    Xc, yc_raw, gc, gcc = load_track(a.cfp_track)
+    Xo, yo_raw, go, gco, co = load_track(a.oct_track)
+    Xc, yc_raw, gc, gcc, cc = load_track(a.cfp_track)
     if Xo.shape[1] != Xc.shape[1]:
         sys.exit(f"feature dimensions differ ({Xo.shape[1]} vs "
                  f"{Xc.shape[1]}); both tracks must use the same backbone")
-    Xo, yo, go, drop_o = to_binary(a.oct_track, Xo, yo_raw, go)
-    Xc, yc, gc, drop_c = to_binary(a.cfp_track, Xc, yc_raw, gc)
+    if a.oct_cohort:
+        m = co == a.oct_cohort
+        if not m.any():
+            sys.exit(f"no OCT rows in cohort {a.oct_cohort!r}; "
+                     f"available: {sorted(set(co))}")
+        Xo, yo_raw, go, co = Xo[m], yo_raw[m], go[m], co[m]
+    Xo, yo, go, co, drop_o = to_binary(oct_mapping, Xo, yo_raw, go, co)
+    Xc, yc, gc, cc, drop_c = to_binary(cfp_mapping, Xc, yc_raw, gc, cc)
 
-    print(f"\n{'='*78}\nDATA IN THE SHARED SPACE  (NORMAL=0, AMD=1)\n{'='*78}")
+    mixed = {}
+    keep_o, mixed["OCT"] = mixed_mask(yo, go)
+    keep_c, mixed["CFP"] = mixed_mask(yc, gc)
+    if a.drop_mixed:
+        Xo, yo, go, co = Xo[keep_o], yo[keep_o], go[keep_o], co[keep_o]
+        Xc, yc, gc, cc = Xc[keep_c], yc[keep_c], gc[keep_c], cc[keep_c]
+
+    print(f"\n{'='*78}\nDATA IN THE SHARED SPACE  (negative=0, AMD=1)\n"
+          f"{'='*78}")
     counts = {}
-    for name, y, g, gcol, drop in (("OCT", yo, go, gco, drop_o),
-                                   ("CFP", yc, gc, gcc, drop_c)):
+    for name, y, g, gcol, drop, coh in (("OCT", yo, go, gco, drop_o, co),
+                                        ("CFP", yc, gc, gcc, drop_c, cc)):
         n = np.bincount(y, minlength=2)
+        cohorts = {str(k): int(v)
+                   for k, v in pd.Series(coh).value_counts().items()}
         counts[name] = {"images": int(len(y)), "groups": int(len(set(g))),
-                        "NORMAL": int(n[0]), "AMD": int(n[1]),
-                        "grouped_by": gcol, "dropped": drop}
+                        "negative": int(n[0]), "AMD": int(n[1]),
+                        "negative_classes": neg[name], "cohorts": cohorts,
+                        "grouped_by": gcol, "dropped_classes": drop,
+                        "mixed_groups": mixed[name],
+                        "mixed_dropped": bool(a.drop_mixed)}
         print(f"  {name}: {len(y):,} images, {len(set(g)):,} groups "
-              f"(by {gcol})  NORMAL {n[0]:,}  AMD {n[1]:,}"
+              f"(by {gcol})  {'+'.join(neg[name])} {n[0]:,}  AMD {n[1]:,}"
               f"   dropped {drop or 'none'}")
+        print(f"       cohorts {cohorts}   mixed-label groups {mixed[name]} "
+              f"({'dropped' if a.drop_mixed else 'kept'})")
 
     fo = assign_folds(yo, go, a.folds, a.seed)
     fc = assign_folds(yc, gc, a.folds, a.seed)
@@ -299,8 +371,9 @@ def main():
         "_meta": {"oct_track": a.oct_track, "cfp_track": a.cfp_track,
                   "folds": a.folds, "seed": a.seed, "data": counts,
                   "classes": CLASSES,
-                  "mapping": {a.oct_track: SHARED[a.oct_track],
-                              a.cfp_track: SHARED[a.cfp_track]},
+                  "mapping": {"oct": oct_mapping, "cfp": cfp_mapping},
+                  "oct_map": a.oct_map, "oct_cohort": a.oct_cohort,
+                  "drop_mixed": a.drop_mixed,
                   "classifier": "LogisticRegression(max_iter=2000, "
                                 "class_weight='balanced') on frozen "
                                 "ConvNeXt features",
