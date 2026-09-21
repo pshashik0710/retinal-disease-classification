@@ -1,0 +1,320 @@
+#!/usr/bin/env python3
+"""
+crossmodal_cv.py -- five-fold, group-disjoint cross-modal transfer, OCT <-> CFP.
+
+crossmodal_probe.py answered the question once: one fit per direction and
+a bootstrap interval over the test set. This repeats it over K folds, so
+every number is a mean +/- sd across held-out groups, and it pairs each
+cross-modal result with a within-modal result on the SAME test fold.
+
+Each modality is split into K group-disjoint, class-stratified folds. In
+fold k one model is fitted per modality and each is scored on both
+modalities' held-out fold:
+
+    OCT model (OCT folds != k)  ->  within_OCT   (OCT fold k)
+                                ->  OCT_to_CFP   (CFP fold k)
+    CFP model (CFP folds != k)  ->  within_CFP   (CFP fold k)
+                                ->  CFP_to_OCT   (OCT fold k)
+
+    delta OCT_to_CFP = within_CFP - OCT_to_CFP      same CFP test fold
+    delta CFP_to_OCT = within_OCT - CFP_to_OCT      same OCT test fold
+
+A delta is what is lost on that test fold by training on the other
+modality instead of the right one. The test fold is identical on both
+sides, so it is a paired comparison. Sign convention: positive = worse
+when trained on the other modality (for log_loss that is cross minus
+within; for every other metric within minus cross).
+
+Losses: every model's log-loss is reported on its own training data and on
+each test fold, next to accuracy, balanced accuracy, macro-F1, AUC,
+sensitivity (AMD recall) and specificity (NORMAL recall).
+
+Grouping uses group_key where the manifest has one (it links patients that
+share duplicate images, so it is stricter than patient_key), else
+patient_key. The shared two-class space and the dropped classes are the
+ones defined in crossmodal_probe.py.
+
+Fold scores are not independent -- the training sets overlap -- so the sd
+describes spread across folds, not a standard error. A naive paired t-test
+over folds overstates significance; use a corrected resampled test if a
+p-value is required.
+
+Usage:
+    python scripts/crossmodal_cv.py                           # HYAMD
+    python scripts/crossmodal_cv.py --cfp-track cfp_odir      # healthy NORMAL
+    python scripts/crossmodal_cv.py --cfp-track cfp_amdnet23
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import sys
+
+import numpy as np
+import pandas as pd
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import (accuracy_score, balanced_accuracy_score,
+                             confusion_matrix, f1_score, log_loss,
+                             roc_auc_score)
+from sklearn.model_selection import StratifiedGroupKFold
+
+try:
+    from scripts.config import Config
+    from scripts.crossmodal_probe import CLASSES, SHARED, to_shared
+except ImportError:
+    from config import Config
+    from crossmodal_probe import CLASSES, SHARED, to_shared
+
+METRICS = ["accuracy", "balanced_accuracy", "macro_f1", "auc",
+           "sensitivity", "specificity", "log_loss"]
+SHORT = {"accuracy": "acc", "balanced_accuracy": "bal_acc",
+         "macro_f1": "macro_F1", "auc": "AUC", "sensitivity": "sens",
+         "specificity": "spec", "log_loss": "log_loss"}
+LOWER_IS_BETTER = {"log_loss"}
+CONDITIONS = ["train_OCT", "train_CFP", "within_OCT", "within_CFP",
+              "OCT_to_CFP", "CFP_to_OCT"]
+PAIRS = {"OCT_to_CFP": "within_CFP",      # scored on the same CFP fold
+         "CFP_to_OCT": "within_OCT"}      # scored on the same OCT fold
+
+
+def load_track(track):
+    """Cached features for every split, with the label and group per row."""
+    if track not in Config.TRACKS:
+        sys.exit(f"unknown track {track!r}; valid: {sorted(Config.TRACKS)}")
+    t = Config.TRACKS[track]
+    cache_dir = os.path.join(Config.BASE_DIR, "features", track)
+    tag = f"{Config.MODEL_NAME}_{Config.IMAGE_SIZE}_{t['resize']}"
+    man_path = os.path.join(Config.MANIFEST_DIR, t["manifest"])
+    if not os.path.isfile(man_path):
+        sys.exit(f"manifest not found: {man_path}")
+
+    # chunked, few columns: the full read has exhausted the Windows commit
+    # limit on this machine before
+    filt = t.get("filter") or {}
+    keep = {"split", "y_label", "patient_key", "group_key", *filt}
+    man = pd.concat([c for c in pd.read_csv(man_path, chunksize=20000,
+                                            usecols=lambda x: x in keep)],
+                    ignore_index=True)
+    for col, vals in filt.items():
+        man = man[man[col].isin(vals)]
+    man = man.reset_index(drop=True)
+    gcol = "group_key" if "group_key" in man.columns else "patient_key"
+
+    X, y, g = [], [], []
+    for sp in ("train", "val", "test"):
+        f = os.path.join(cache_dir, f"{tag}_{sp}.npz")
+        if not os.path.isfile(f):
+            sys.exit(f"no cache for {track}/{sp}: {f}\n"
+                     f"Run: python scripts/cache_features.py --track {track}")
+        d = np.load(f)
+        sub = man[man["split"] == sp].reset_index(drop=True)
+        X.append(d["features"])
+        y.append(sub.loc[d["index"], "y_label"].to_numpy())
+        g.append(sub.loc[d["index"], gcol].astype(str).to_numpy())
+    return np.concatenate(X), np.concatenate(y), np.concatenate(g), gcol
+
+
+def to_binary(track, X, y_raw, g):
+    """Keep rows that map into the shared space; NORMAL=0, AMD=1."""
+    s = to_shared(track, y_raw)
+    keep = s != None                                   # noqa: E711
+    c2i = {c: i for i, c in enumerate(CLASSES)}
+    y = np.array([c2i[v] for v in s[keep]], dtype=int)
+    return X[keep], y, g[keep], sorted(set(y_raw[~keep]))
+
+
+def assign_folds(y, g, k, seed):
+    fid = np.full(len(y), -1)
+    sgkf = StratifiedGroupKFold(n_splits=k, shuffle=True, random_state=seed)
+    for i, (_, te) in enumerate(sgkf.split(np.zeros(len(y)), y, g)):
+        fid[te] = i
+    return fid
+
+
+def fit(X, y):
+    return LogisticRegression(max_iter=2000, class_weight="balanced").fit(X, y)
+
+
+def score(y, prob):
+    pred = (prob >= 0.5).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y, pred, labels=[0, 1]).ravel()
+    nan = float("nan")
+    return {
+        "accuracy": float(accuracy_score(y, pred)),
+        "balanced_accuracy": float(balanced_accuracy_score(y, pred)),
+        "macro_f1": float(f1_score(y, pred, average="macro",
+                                   zero_division=0)),
+        "auc": float(roc_auc_score(y, prob)) if len(set(y)) == 2 else nan,
+        "sensitivity": float(tp / (tp + fn)) if tp + fn else nan,
+        "specificity": float(tn / (tn + fp)) if tn + fp else nan,
+        "log_loss": float(log_loss(y, prob, labels=[0, 1])),
+        "n": int(len(y)),
+        "confusion": [[int(tn), int(fp)], [int(fn), int(tp)]],
+    }
+
+
+def mean_sd(v):
+    v = np.asarray(v, dtype=float)
+    return float(np.nanmean(v)), float(np.nanstd(v, ddof=1))
+
+
+def main():
+    p = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("--oct-track", default="oct")
+    p.add_argument("--cfp-track", default="cfp_hyamd")
+    p.add_argument("--folds", type=int, default=5)
+    p.add_argument("--seed", type=int, default=Config.SEED)
+    p.add_argument("--out", default=None)
+    a = p.parse_args()
+    out = a.out or f"reports/crossmodal_cv_{a.cfp_track}.json"
+
+    print(f"\n{'='*78}\nCROSS-MODAL TRANSFER, {a.folds}-FOLD GROUP-DISJOINT\n"
+          f"{'='*78}")
+    print(f"  OCT track : {a.oct_track}\n  CFP track : {a.cfp_track}\n"
+          f"  seed      : {a.seed}")
+
+    Xo, yo_raw, go, gco = load_track(a.oct_track)
+    Xc, yc_raw, gc, gcc = load_track(a.cfp_track)
+    if Xo.shape[1] != Xc.shape[1]:
+        sys.exit(f"feature dimensions differ ({Xo.shape[1]} vs "
+                 f"{Xc.shape[1]}); both tracks must use the same backbone")
+    Xo, yo, go, drop_o = to_binary(a.oct_track, Xo, yo_raw, go)
+    Xc, yc, gc, drop_c = to_binary(a.cfp_track, Xc, yc_raw, gc)
+
+    print(f"\n{'='*78}\nDATA IN THE SHARED SPACE  (NORMAL=0, AMD=1)\n{'='*78}")
+    counts = {}
+    for name, y, g, gcol, drop in (("OCT", yo, go, gco, drop_o),
+                                   ("CFP", yc, gc, gcc, drop_c)):
+        n = np.bincount(y, minlength=2)
+        counts[name] = {"images": int(len(y)), "groups": int(len(set(g))),
+                        "NORMAL": int(n[0]), "AMD": int(n[1]),
+                        "grouped_by": gcol, "dropped": drop}
+        print(f"  {name}: {len(y):,} images, {len(set(g)):,} groups "
+              f"(by {gcol})  NORMAL {n[0]:,}  AMD {n[1]:,}"
+              f"   dropped {drop or 'none'}")
+
+    fo = assign_folds(yo, go, a.folds, a.seed)
+    fc = assign_folds(yc, gc, a.folds, a.seed)
+
+    print(f"\n{'='*78}\nFOLDS\n{'='*78}")
+    for name, f, y, g in (("OCT", fo, yo, go), ("CFP", fc, yc, gc)):
+        spans = pd.Series(f).groupby(pd.Series(g)).nunique()
+        if (spans > 1).any():
+            sys.exit(f"{name}: {int((spans > 1).sum())} groups span more "
+                     f"than one fold")
+        for k in range(a.folds):
+            m = f == k
+            print(f"  {name} fold {k}: {m.sum():>7,} images  "
+                  f"{len(set(g[m])):>5,} groups  AMD share {y[m].mean():.3f}")
+        print(f"  {name}: every group sits in exactly one fold   OK")
+
+    print(f"\n{'='*78}\nPER FOLD  (AUC)\n{'='*78}")
+    rows = []
+    for k in range(a.folds):
+        otr, ote = fo != k, fo == k
+        ctr, cte = fc != k, fc == k
+        mo, mc = fit(Xo[otr], yo[otr]), fit(Xc[ctr], yc[ctr])
+
+        def prob(model, X):
+            return model.predict_proba(X)[:, 1]
+
+        r = {"fold": k,
+             "train_OCT": score(yo[otr], prob(mo, Xo[otr])),
+             "train_CFP": score(yc[ctr], prob(mc, Xc[ctr])),
+             "within_OCT": score(yo[ote], prob(mo, Xo[ote])),
+             "within_CFP": score(yc[cte], prob(mc, Xc[cte])),
+             "OCT_to_CFP": score(yc[cte], prob(mo, Xc[cte])),
+             "CFP_to_OCT": score(yo[ote], prob(mc, Xo[ote]))}
+        rows.append(r)
+        print(f"  fold {k}:  within OCT {r['within_OCT']['auc']:.4f}   "
+              f"within CFP {r['within_CFP']['auc']:.4f}   "
+              f"OCT->CFP {r['OCT_to_CFP']['auc']:.4f}   "
+              f"CFP->OCT {r['CFP_to_OCT']['auc']:.4f}")
+
+    summary = {c: {m: mean_sd([r[c][m] for r in rows]) for m in METRICS}
+               for c in CONDITIONS}
+    deltas = {}
+    for cross, within in PAIRS.items():
+        deltas[cross] = {}
+        for m in METRICS:
+            per = [(r[cross][m] - r[within][m]) if m in LOWER_IS_BETTER
+                   else (r[within][m] - r[cross][m]) for r in rows]
+            mu, sd = mean_sd(per)
+            deltas[cross][m] = {"per_fold": [round(x, 4) for x in per],
+                                "mean": round(mu, 4), "sd": round(sd, 4),
+                                "folds_worse": int(sum(x > 0 for x in per))}
+
+    width = 17
+    head = "".join(f"{SHORT[m]:>{width}}" for m in METRICS)
+    print(f"\n{'='*78}\nSUMMARY  mean +/- sd over {a.folds} folds\n{'='*78}")
+    print(f"  {'condition':<12}{head}")
+    for c in CONDITIONS:
+        cells = "".join(f"{summary[c][m][0]:>{width-8}.4f}+/-"
+                        f"{summary[c][m][1]:.3f}" for m in METRICS)
+        print(f"  {c:<12}{cells}")
+
+    print(f"\n{'='*78}\nDELTAS  (positive = worse when trained on the other "
+          f"modality)\n{'='*78}")
+    for cross, within in PAIRS.items():
+        print(f"  {cross}  vs  {within}")
+        for m in METRICS:
+            d = deltas[cross][m]
+            print(f"    {SHORT[m]:<9} {d['mean']:+.4f} +/- {d['sd']:.4f}   "
+                  f"worse in {d['folds_worse']}/{a.folds} folds   "
+                  f"per fold {d['per_fold']}")
+
+    print(f"\n{'='*78}\nMODALITY PROBE  (can a linear model tell OCT from "
+          f"CFP?)\n{'='*78}")
+    ym = np.r_[np.zeros(len(yo), dtype=int), np.ones(len(yc), dtype=int)]
+    gm = np.r_[np.char.add("oct:", go.astype(str)),
+               np.char.add("cfp:", gc.astype(str))]
+    fm = assign_folds(ym, gm, a.folds, a.seed)
+    Xm = np.vstack([Xo, Xc])
+    macc = []
+    for k in range(a.folds):
+        mm = fit(Xm[fm != k], ym[fm != k])
+        macc.append(float(mm.score(Xm[fm == k], ym[fm == k])))
+    mbase = float(max(ym.mean(), 1 - ym.mean()))
+    mmu, msd = mean_sd(macc)
+    print(f"  accuracy {mmu:.4f} +/- {msd:.4f}   majority baseline {mbase:.4f}")
+
+    def rnd(d):
+        return {k: (round(v, 4) if isinstance(v, float) else v)
+                for k, v in d.items()}
+
+    res = {
+        "summary": {c: {m: {"mean": round(summary[c][m][0], 4),
+                            "sd": round(summary[c][m][1], 4)}
+                        for m in METRICS} for c in CONDITIONS},
+        "deltas": deltas,
+        "per_fold": [{"fold": r["fold"], **{c: rnd(r[c]) for c in CONDITIONS}}
+                     for r in rows],
+        "modality_probe": {"per_fold": [round(x, 4) for x in macc],
+                           "mean": round(mmu, 4), "sd": round(msd, 4),
+                           "majority_baseline": round(mbase, 4)},
+        "_meta": {"oct_track": a.oct_track, "cfp_track": a.cfp_track,
+                  "folds": a.folds, "seed": a.seed, "data": counts,
+                  "classes": CLASSES,
+                  "mapping": {a.oct_track: SHARED[a.oct_track],
+                              a.cfp_track: SHARED[a.cfp_track]},
+                  "classifier": "LogisticRegression(max_iter=2000, "
+                                "class_weight='balanced') on frozen "
+                                "ConvNeXt features",
+                  "delta_sign": "positive = worse when trained on the "
+                                "other modality (log_loss: cross - within; "
+                                "others: within - cross)",
+                  "note": "fold scores share training data; sd is spread "
+                          "across folds, not a standard error"},
+    }
+    os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+    with open(out, "w") as f:
+        json.dump(res, f, indent=2)
+    print(f"\n  results -> {out}\n")
+
+
+if __name__ == "__main__":
+    main()

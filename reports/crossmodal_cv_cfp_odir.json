@@ -1,0 +1,1034 @@
+{
+  "summary": {
+    "train_OCT": {
+      "accuracy": {
+        "mean": 0.9578,
+        "sd": 0.0015
+      },
+      "balanced_accuracy": {
+        "mean": 0.9575,
+        "sd": 0.0016
+      },
+      "macro_f1": {
+        "mean": 0.9578,
+        "sd": 0.0015
+      },
+      "auc": {
+        "mean": 0.9904,
+        "sd": 0.0005
+      },
+      "sensitivity": {
+        "mean": 0.9439,
+        "sd": 0.0018
+      },
+      "specificity": {
+        "mean": 0.9711,
+        "sd": 0.0013
+      },
+      "log_loss": {
+        "mean": 0.1162,
+        "sd": 0.0035
+      }
+    },
+    "train_CFP": {
+      "accuracy": {
+        "mean": 1.0,
+        "sd": 0.0
+      },
+      "balanced_accuracy": {
+        "mean": 1.0,
+        "sd": 0.0
+      },
+      "macro_f1": {
+        "mean": 1.0,
+        "sd": 0.0
+      },
+      "auc": {
+        "mean": 1.0,
+        "sd": 0.0
+      },
+      "sensitivity": {
+        "mean": 1.0,
+        "sd": 0.0
+      },
+      "specificity": {
+        "mean": 1.0,
+        "sd": 0.0
+      },
+      "log_loss": {
+        "mean": 0.0074,
+        "sd": 0.0006
+      }
+    },
+    "within_OCT": {
+      "accuracy": {
+        "mean": 0.9439,
+        "sd": 0.0048
+      },
+      "balanced_accuracy": {
+        "mean": 0.9436,
+        "sd": 0.0048
+      },
+      "macro_f1": {
+        "mean": 0.9439,
+        "sd": 0.0048
+      },
+      "auc": {
+        "mean": 0.9836,
+        "sd": 0.0025
+      },
+      "sensitivity": {
+        "mean": 0.9294,
+        "sd": 0.0048
+      },
+      "specificity": {
+        "mean": 0.9578,
+        "sd": 0.0065
+      },
+      "log_loss": {
+        "mean": 0.1574,
+        "sd": 0.0172
+      }
+    },
+    "within_CFP": {
+      "accuracy": {
+        "mean": 0.953,
+        "sd": 0.0208
+      },
+      "balanced_accuracy": {
+        "mean": 0.9434,
+        "sd": 0.0302
+      },
+      "macro_f1": {
+        "mean": 0.9463,
+        "sd": 0.0245
+      },
+      "auc": {
+        "mean": 0.9898,
+        "sd": 0.0059
+      },
+      "sensitivity": {
+        "mean": 0.9149,
+        "sd": 0.0603
+      },
+      "specificity": {
+        "mean": 0.9719,
+        "sd": 0.0109
+      },
+      "log_loss": {
+        "mean": 0.126,
+        "sd": 0.0496
+      }
+    },
+    "OCT_to_CFP": {
+      "accuracy": {
+        "mean": 0.3732,
+        "sd": 0.0438
+      },
+      "balanced_accuracy": {
+        "mean": 0.4712,
+        "sd": 0.0196
+      },
+      "macro_f1": {
+        "mean": 0.3486,
+        "sd": 0.0662
+      },
+      "auc": {
+        "mean": 0.4819,
+        "sd": 0.083
+      },
+      "sensitivity": {
+        "mean": 0.7617,
+        "sd": 0.1639
+      },
+      "specificity": {
+        "mean": 0.1806,
+        "sd": 0.1426
+      },
+      "log_loss": {
+        "mean": 5.5574,
+        "sd": 1.7209
+      }
+    },
+    "CFP_to_OCT": {
+      "accuracy": {
+        "mean": 0.4899,
+        "sd": 0.0076
+      },
+      "balanced_accuracy": {
+        "mean": 0.5011,
+        "sd": 0.0072
+      },
+      "macro_f1": {
+        "mean": 0.346,
+        "sd": 0.0271
+      },
+      "auc": {
+        "mean": 0.5724,
+        "sd": 0.0526
+      },
+      "sensitivity": {
+        "mean": 0.9804,
+        "sd": 0.0217
+      },
+      "specificity": {
+        "mean": 0.0218,
+        "sd": 0.0317
+      },
+      "log_loss": {
+        "mean": 2.6749,
+        "sd": 0.9015
+      }
+    }
+  },
+  "deltas": {
+    "OCT_to_CFP": {
+      "accuracy": {
+        "per_fold": [
+          0.5789,
+          0.5405,
+          0.5878,
+          0.5772,
+          0.6149
+        ],
+        "mean": 0.5799,
+        "sd": 0.0267,
+        "folds_worse": 5
+      },
+      "balanced_accuracy": {
+        "per_fold": [
+          0.4939,
+          0.5174,
+          0.4033,
+          0.4716,
+          0.4751
+        ],
+        "mean": 0.4723,
+        "sd": 0.0426,
+        "folds_worse": 5
+      },
+      "macro_f1": {
+        "per_fold": [
+          0.578,
+          0.5424,
+          0.6391,
+          0.5816,
+          0.6475
+        ],
+        "mean": 0.5977,
+        "sd": 0.0444,
+        "folds_worse": 5
+      },
+      "auc": {
+        "per_fold": [
+          0.5902,
+          0.5675,
+          0.3928,
+          0.4566,
+          0.5325
+        ],
+        "mean": 0.5079,
+        "sd": 0.0819,
+        "folds_worse": 5
+      },
+      "sensitivity": {
+        "per_fold": [
+          0.2353,
+          0.449,
+          -0.1429,
+          0.1633,
+          0.0612
+        ],
+        "mean": 0.1532,
+        "sd": 0.2182,
+        "folds_worse": 4
+      },
+      "specificity": {
+        "per_fold": [
+          0.7525,
+          0.5859,
+          0.9495,
+          0.78,
+          0.8889
+        ],
+        "mean": 0.7913,
+        "sd": 0.14,
+        "folds_worse": 5
+      },
+      "log_loss": {
+        "per_fold": [
+          4.4147,
+          3.4031,
+          7.4457,
+          5.04,
+          6.8532
+        ],
+        "mean": 5.4313,
+        "sd": 1.6867,
+        "folds_worse": 5
+      }
+    },
+    "CFP_to_OCT": {
+      "accuracy": {
+        "per_fold": [
+          0.4461,
+          0.4504,
+          0.4582,
+          0.4502,
+          0.4654
+        ],
+        "mean": 0.4541,
+        "sd": 0.0077,
+        "folds_worse": 5
+      },
+      "balanced_accuracy": {
+        "per_fold": [
+          0.4354,
+          0.4384,
+          0.4466,
+          0.4382,
+          0.4539
+        ],
+        "mean": 0.4425,
+        "sd": 0.0076,
+        "folds_worse": 5
+      },
+      "macro_f1": {
+        "per_fold": [
+          0.5544,
+          0.6091,
+          0.6092,
+          0.6077,
+          0.6089
+        ],
+        "mean": 0.5979,
+        "sd": 0.0243,
+        "folds_worse": 5
+      },
+      "auc": {
+        "per_fold": [
+          0.3744,
+          0.375,
+          0.4072,
+          0.3972,
+          0.5026
+        ],
+        "mean": 0.4113,
+        "sd": 0.053,
+        "folds_worse": 5
+      },
+      "sensitivity": {
+        "per_fold": [
+          -0.018,
+          -0.0731,
+          -0.0584,
+          -0.0727,
+          -0.0332
+        ],
+        "mean": -0.0511,
+        "sd": 0.0246,
+        "folds_worse": 0
+      },
+      "specificity": {
+        "per_fold": [
+          0.8888,
+          0.9498,
+          0.9516,
+          0.9491,
+          0.9411
+        ],
+        "mean": 0.9361,
+        "sd": 0.0267,
+        "folds_worse": 5
+      },
+      "log_loss": {
+        "per_fold": [
+          1.5061,
+          3.6113,
+          2.2591,
+          3.2598,
+          1.9516
+        ],
+        "mean": 2.5176,
+        "sd": 0.8885,
+        "folds_worse": 5
+      }
+    }
+  },
+  "per_fold": [
+    {
+      "fold": 0,
+      "train_OCT": {
+        "accuracy": 0.9569,
+        "balanced_accuracy": 0.9566,
+        "macro_f1": 0.9569,
+        "auc": 0.9899,
+        "sensitivity": 0.9427,
+        "specificity": 0.9705,
+        "log_loss": 0.1196,
+        "n": 46589,
+        "confusion": [
+          [
+            23137,
+            703
+          ],
+          [
+            1304,
+            21445
+          ]
+        ]
+      },
+      "train_CFP": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "macro_f1": 1.0,
+        "auc": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "log_loss": 0.0074,
+        "n": 593,
+        "confusion": [
+          [
+            397,
+            0
+          ],
+          [
+            0,
+            196
+          ]
+        ]
+      },
+      "within_OCT": {
+        "accuracy": 0.9484,
+        "balanced_accuracy": 0.948,
+        "macro_f1": 0.9483,
+        "auc": 0.9856,
+        "sensitivity": 0.9296,
+        "specificity": 0.9664,
+        "log_loss": 0.145,
+        "n": 11635,
+        "confusion": [
+          [
+            5754,
+            200
+          ],
+          [
+            400,
+            5281
+          ]
+        ]
+      },
+      "within_CFP": {
+        "accuracy": 0.9474,
+        "balanced_accuracy": 0.941,
+        "macro_f1": 0.941,
+        "auc": 0.9878,
+        "sensitivity": 0.9216,
+        "specificity": 0.9604,
+        "log_loss": 0.1431,
+        "n": 152,
+        "confusion": [
+          [
+            97,
+            4
+          ],
+          [
+            4,
+            47
+          ]
+        ]
+      },
+      "OCT_to_CFP": {
+        "accuracy": 0.3684,
+        "balanced_accuracy": 0.4471,
+        "macro_f1": 0.363,
+        "auc": 0.3976,
+        "sensitivity": 0.6863,
+        "specificity": 0.2079,
+        "log_loss": 4.5578,
+        "n": 152,
+        "confusion": [
+          [
+            21,
+            80
+          ],
+          [
+            16,
+            35
+          ]
+        ]
+      },
+      "CFP_to_OCT": {
+        "accuracy": 0.5024,
+        "balanced_accuracy": 0.5126,
+        "macro_f1": 0.394,
+        "auc": 0.6112,
+        "sensitivity": 0.9475,
+        "specificity": 0.0776,
+        "log_loss": 1.6511,
+        "n": 11635,
+        "confusion": [
+          [
+            462,
+            5492
+          ],
+          [
+            298,
+            5383
+          ]
+        ]
+      }
+    },
+    {
+      "fold": 1,
+      "train_OCT": {
+        "accuracy": 0.959,
+        "balanced_accuracy": 0.9587,
+        "macro_f1": 0.9589,
+        "auc": 0.9908,
+        "sensitivity": 0.945,
+        "specificity": 0.9724,
+        "log_loss": 0.1137,
+        "n": 46591,
+        "confusion": [
+          [
+            23181,
+            659
+          ],
+          [
+            1252,
+            21499
+          ]
+        ]
+      },
+      "train_CFP": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "macro_f1": 1.0,
+        "auc": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "log_loss": 0.0078,
+        "n": 597,
+        "confusion": [
+          [
+            399,
+            0
+          ],
+          [
+            0,
+            198
+          ]
+        ]
+      },
+      "within_OCT": {
+        "accuracy": 0.9391,
+        "balanced_accuracy": 0.9387,
+        "macro_f1": 0.939,
+        "auc": 0.9817,
+        "sensitivity": 0.9259,
+        "specificity": 0.9516,
+        "log_loss": 0.167,
+        "n": 11633,
+        "confusion": [
+          [
+            5666,
+            288
+          ],
+          [
+            421,
+            5258
+          ]
+        ]
+      },
+      "within_CFP": {
+        "accuracy": 0.9797,
+        "balanced_accuracy": 0.9797,
+        "macro_f1": 0.9772,
+        "auc": 0.9938,
+        "sensitivity": 0.9796,
+        "specificity": 0.9798,
+        "log_loss": 0.0867,
+        "n": 148,
+        "confusion": [
+          [
+            97,
+            2
+          ],
+          [
+            1,
+            48
+          ]
+        ]
+      },
+      "OCT_to_CFP": {
+        "accuracy": 0.4392,
+        "balanced_accuracy": 0.4623,
+        "macro_f1": 0.4348,
+        "auc": 0.4263,
+        "sensitivity": 0.5306,
+        "specificity": 0.3939,
+        "log_loss": 3.4898,
+        "n": 148,
+        "confusion": [
+          [
+            39,
+            60
+          ],
+          [
+            23,
+            26
+          ]
+        ]
+      },
+      "CFP_to_OCT": {
+        "accuracy": 0.4886,
+        "balanced_accuracy": 0.5004,
+        "macro_f1": 0.3299,
+        "auc": 0.6067,
+        "sensitivity": 0.9989,
+        "specificity": 0.0018,
+        "log_loss": 3.7783,
+        "n": 11633,
+        "confusion": [
+          [
+            11,
+            5943
+          ],
+          [
+            6,
+            5673
+          ]
+        ]
+      }
+    },
+    {
+      "fold": 2,
+      "train_OCT": {
+        "accuracy": 0.9567,
+        "balanced_accuracy": 0.9564,
+        "macro_f1": 0.9567,
+        "auc": 0.9899,
+        "sensitivity": 0.9428,
+        "specificity": 0.9701,
+        "log_loss": 0.1199,
+        "n": 46553,
+        "confusion": [
+          [
+            23111,
+            713
+          ],
+          [
+            1301,
+            21428
+          ]
+        ]
+      },
+      "train_CFP": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "macro_f1": 1.0,
+        "auc": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "log_loss": 0.0068,
+        "n": 597,
+        "confusion": [
+          [
+            399,
+            0
+          ],
+          [
+            0,
+            198
+          ]
+        ]
+      },
+      "within_OCT": {
+        "accuracy": 0.947,
+        "balanced_accuracy": 0.9466,
+        "macro_f1": 0.9469,
+        "auc": 0.9862,
+        "sensitivity": 0.9307,
+        "specificity": 0.9625,
+        "log_loss": 0.1379,
+        "n": 11671,
+        "confusion": [
+          [
+            5746,
+            224
+          ],
+          [
+            395,
+            5306
+          ]
+        ]
+      },
+      "within_CFP": {
+        "accuracy": 0.9257,
+        "balanced_accuracy": 0.8981,
+        "macro_f1": 0.9127,
+        "auc": 0.988,
+        "sensitivity": 0.8163,
+        "specificity": 0.9798,
+        "log_loss": 0.1572,
+        "n": 148,
+        "confusion": [
+          [
+            97,
+            2
+          ],
+          [
+            9,
+            40
+          ]
+        ]
+      },
+      "OCT_to_CFP": {
+        "accuracy": 0.3378,
+        "balanced_accuracy": 0.4947,
+        "macro_f1": 0.2736,
+        "auc": 0.5952,
+        "sensitivity": 0.9592,
+        "specificity": 0.0303,
+        "log_loss": 7.6029,
+        "n": 148,
+        "confusion": [
+          [
+            3,
+            96
+          ],
+          [
+            2,
+            47
+          ]
+        ]
+      },
+      "CFP_to_OCT": {
+        "accuracy": 0.4887,
+        "balanced_accuracy": 0.5,
+        "macro_f1": 0.3377,
+        "auc": 0.579,
+        "sensitivity": 0.9891,
+        "specificity": 0.0109,
+        "log_loss": 2.3969,
+        "n": 11671,
+        "confusion": [
+          [
+            65,
+            5905
+          ],
+          [
+            62,
+            5639
+          ]
+        ]
+      }
+    },
+    {
+      "fold": 3,
+      "train_OCT": {
+        "accuracy": 0.9599,
+        "balanced_accuracy": 0.9596,
+        "macro_f1": 0.9599,
+        "auc": 0.9911,
+        "sensitivity": 0.9465,
+        "specificity": 0.9727,
+        "log_loss": 0.1118,
+        "n": 46587,
+        "confusion": [
+          [
+            23188,
+            651
+          ],
+          [
+            1216,
+            21532
+          ]
+        ]
+      },
+      "train_CFP": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "macro_f1": 1.0,
+        "auc": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "log_loss": 0.0082,
+        "n": 596,
+        "confusion": [
+          [
+            398,
+            0
+          ],
+          [
+            0,
+            198
+          ]
+        ]
+      },
+      "within_OCT": {
+        "accuracy": 0.9385,
+        "balanced_accuracy": 0.9381,
+        "macro_f1": 0.9384,
+        "auc": 0.9804,
+        "sensitivity": 0.9241,
+        "specificity": 0.9521,
+        "log_loss": 0.1809,
+        "n": 11637,
+        "confusion": [
+          [
+            5670,
+            285
+          ],
+          [
+            431,
+            5251
+          ]
+        ]
+      },
+      "within_CFP": {
+        "accuracy": 0.9664,
+        "balanced_accuracy": 0.9594,
+        "macro_f1": 0.9618,
+        "auc": 0.9973,
+        "sensitivity": 0.9388,
+        "specificity": 0.98,
+        "log_loss": 0.0624,
+        "n": 149,
+        "confusion": [
+          [
+            98,
+            2
+          ],
+          [
+            3,
+            46
+          ]
+        ]
+      },
+      "OCT_to_CFP": {
+        "accuracy": 0.3893,
+        "balanced_accuracy": 0.4878,
+        "macro_f1": 0.3802,
+        "auc": 0.5407,
+        "sensitivity": 0.7755,
+        "specificity": 0.2,
+        "log_loss": 5.1025,
+        "n": 149,
+        "confusion": [
+          [
+            20,
+            80
+          ],
+          [
+            11,
+            38
+          ]
+        ]
+      },
+      "CFP_to_OCT": {
+        "accuracy": 0.4883,
+        "balanced_accuracy": 0.4999,
+        "macro_f1": 0.3307,
+        "auc": 0.5832,
+        "sensitivity": 0.9968,
+        "specificity": 0.003,
+        "log_loss": 3.4407,
+        "n": 11637,
+        "confusion": [
+          [
+            18,
+            5937
+          ],
+          [
+            18,
+            5664
+          ]
+        ]
+      }
+    },
+    {
+      "fold": 4,
+      "train_OCT": {
+        "accuracy": 0.9565,
+        "balanced_accuracy": 0.9562,
+        "macro_f1": 0.9564,
+        "auc": 0.9904,
+        "sensitivity": 0.9424,
+        "specificity": 0.9699,
+        "log_loss": 0.1161,
+        "n": 46576,
+        "confusion": [
+          [
+            23115,
+            718
+          ],
+          [
+            1309,
+            21434
+          ]
+        ]
+      },
+      "train_CFP": {
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "macro_f1": 1.0,
+        "auc": 1.0,
+        "sensitivity": 1.0,
+        "specificity": 1.0,
+        "log_loss": 0.0068,
+        "n": 597,
+        "confusion": [
+          [
+            399,
+            0
+          ],
+          [
+            0,
+            198
+          ]
+        ]
+      },
+      "within_OCT": {
+        "accuracy": 0.9468,
+        "balanced_accuracy": 0.9465,
+        "macro_f1": 0.9467,
+        "auc": 0.9843,
+        "sensitivity": 0.9365,
+        "specificity": 0.9566,
+        "log_loss": 0.1561,
+        "n": 11648,
+        "confusion": [
+          [
+            5702,
+            259
+          ],
+          [
+            361,
+            5326
+          ]
+        ]
+      },
+      "within_CFP": {
+        "accuracy": 0.9459,
+        "balanced_accuracy": 0.939,
+        "macro_f1": 0.939,
+        "auc": 0.9823,
+        "sensitivity": 0.9184,
+        "specificity": 0.9596,
+        "log_loss": 0.1806,
+        "n": 148,
+        "confusion": [
+          [
+            95,
+            4
+          ],
+          [
+            4,
+            45
+          ]
+        ]
+      },
+      "OCT_to_CFP": {
+        "accuracy": 0.3311,
+        "balanced_accuracy": 0.4639,
+        "macro_f1": 0.2915,
+        "auc": 0.4498,
+        "sensitivity": 0.8571,
+        "specificity": 0.0707,
+        "log_loss": 7.0338,
+        "n": 148,
+        "confusion": [
+          [
+            7,
+            92
+          ],
+          [
+            7,
+            42
+          ]
+        ]
+      },
+      "CFP_to_OCT": {
+        "accuracy": 0.4814,
+        "balanced_accuracy": 0.4926,
+        "macro_f1": 0.3378,
+        "auc": 0.4817,
+        "sensitivity": 0.9698,
+        "specificity": 0.0154,
+        "log_loss": 2.1077,
+        "n": 11648,
+        "confusion": [
+          [
+            92,
+            5869
+          ],
+          [
+            172,
+            5515
+          ]
+        ]
+      }
+    }
+  ],
+  "modality_probe": {
+    "per_fold": [
+      1.0,
+      1.0,
+      1.0,
+      1.0,
+      1.0
+    ],
+    "mean": 1.0,
+    "sd": 0.0,
+    "majority_baseline": 0.9874
+  },
+  "_meta": {
+    "oct_track": "oct",
+    "cfp_track": "cfp_odir",
+    "folds": 5,
+    "seed": 42,
+    "data": {
+      "OCT": {
+        "images": 58224,
+        "groups": 4753,
+        "NORMAL": 29794,
+        "AMD": 28430,
+        "grouped_by": "group_key",
+        "dropped": [
+          "DME"
+        ]
+      },
+      "CFP": {
+        "images": 745,
+        "groups": 512,
+        "NORMAL": 498,
+        "AMD": 247,
+        "grouped_by": "group_key",
+        "dropped": [
+          "CATARACT",
+          "DIABETIC"
+        ]
+      }
+    },
+    "classes": [
+      "NORMAL",
+      "AMD"
+    ],
+    "mapping": {
+      "oct": {
+        "NORMAL": "NORMAL",
+        "DRUSEN": "AMD",
+        "CNV": "AMD"
+      },
+      "cfp_odir": {
+        "NORMAL": "NORMAL",
+        "AMD": "AMD"
+      }
+    },
+    "classifier": "LogisticRegression(max_iter=2000, class_weight='balanced') on frozen ConvNeXt features",
+    "delta_sign": "positive = worse when trained on the other modality (log_loss: cross - within; others: within - cross)",
+    "note": "fold scores share training data; sd is spread across folds, not a standard error"
+  }
+}
