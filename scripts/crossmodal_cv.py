@@ -47,11 +47,20 @@ task is confounded with cohort. --drop-mixed removes groups whose images
 carry both classes after mapping. The defaults reproduce the original
 AMD-vs-NORMAL runs exactly.
 
+Sample-size control (--match-train images|groups): OCT has far more
+training data than any CFP set here, so a within-modal gap could be data
+volume rather than modality. With this flag, each fold's OCT TRAINING set
+is subsampled to the CFP training size -- whole groups, class ratio kept,
+--match-repeats random draws averaged -- while the OCT TEST fold stays
+complete. If OCT still beats CFP on equal training data, the gap is not a
+sample-size artifact.
+
 Usage:
     python scripts/crossmodal_cv.py                           # HYAMD
     python scripts/crossmodal_cv.py --cfp-track cfp_odir      # healthy NORMAL
     python scripts/crossmodal_cv.py --cfp-track cfp_amdnet23
     python scripts/crossmodal_cv.py --oct-map amd_dme --oct-cohort kermany --drop-mixed
+    python scripts/crossmodal_cv.py --oct-map amd_dme --oct-cohort kermany --drop-mixed --match-train images
 """
 
 from __future__ import annotations
@@ -188,6 +197,43 @@ def mean_sd(v):
     return float(np.nanmean(v)), float(np.nanstd(v, ddof=1))
 
 
+def match_mask(y, g, train_mask, target, by, rng):
+    """
+    Subsample the training rows to `target` units (images or groups) by
+    drawing whole groups, keeping each class's share of those units.
+    Test rows are never touched.
+    """
+    per = (pd.DataFrame({"g": g[train_mask], "y": y[train_mask]})
+           .groupby("g")["y"].agg(["mean", "size"]))
+    per["y"] = per["mean"].round().astype(int)
+    unit = per["size"] if by == "images" else pd.Series(1, index=per.index)
+    total = float(unit.sum())
+    chosen = set()
+    for _, sub in per.groupby("y"):
+        quota = target * unit[sub.index].sum() / total
+        acc = 0
+        for gid in rng.permutation(sub.index.to_numpy()):
+            if acc >= quota:
+                break
+            chosen.add(gid)
+            acc += unit[gid]
+    return train_mask & np.array([x in chosen for x in g])
+
+
+def avg_scores(ds):
+    """Average score dicts over repeats; confusion matrices are summed."""
+    out = {}
+    for k in ds[0]:
+        v = [d[k] for d in ds]
+        if k == "confusion":
+            out[k] = np.sum(v, axis=0).tolist()
+        elif k == "n":
+            out[k] = int(round(float(np.mean(v))))
+        else:
+            out[k] = float(np.nanmean(v))
+    return out
+
+
 def main():
     p = argparse.ArgumentParser(
         description=__doc__,
@@ -204,12 +250,23 @@ def main():
     p.add_argument("--drop-mixed", action="store_true",
                    help="drop groups whose images carry both classes "
                         "after mapping")
+    p.add_argument("--match-train", choices=["images", "groups"],
+                   default=None,
+                   help="in each fold, subsample OCT training data to the "
+                        "CFP training size (by images or by groups; whole "
+                        "groups drawn, class ratio kept). Test folds are "
+                        "never subsampled")
+    p.add_argument("--match-repeats", type=int, default=5,
+                   help="random subsamples per fold when --match-train is "
+                        "set; OCT scores are averaged over them")
     p.add_argument("--out", default=None)
     a = p.parse_args()
 
     tags = [t for t, on in ((a.oct_map, a.oct_map != "amd_normal"),
                             (a.oct_cohort, bool(a.oct_cohort)),
-                            ("nomixed", a.drop_mixed)) if on]
+                            ("nomixed", a.drop_mixed),
+                            (f"match{a.match_train}", bool(a.match_train)))
+            if on]
     out = a.out or (f"reports/crossmodal_cv_{a.cfp_track}"
                     f"{''.join('_' + t for t in tags)}.json")
     oct_mapping = OCT_MAPS[a.oct_map]
@@ -227,6 +284,9 @@ def main():
     print(f"  negative  : OCT {neg['OCT']}   CFP {neg['CFP']}")
     print(f"  mixed     : {'dropped' if a.drop_mixed else 'kept'}   "
           f"seed {a.seed}")
+    print(f"  OCT train : "
+          + (f"matched to CFP by {a.match_train}, {a.match_repeats} "
+             f"repeats per fold" if a.match_train else "full"))
 
     Xo, yo_raw, go, gco, co = load_track(a.oct_track)
     Xc, yc_raw, gc, gcc, cc = load_track(a.cfp_track)
@@ -285,27 +345,52 @@ def main():
         print(f"  {name}: every group sits in exactly one fold   OK")
 
     print(f"\n{'='*78}\nPER FOLD  (AUC)\n{'='*78}")
-    rows = []
+
+    def prob(model, X):
+        return model.predict_proba(X)[:, 1]
+
+    rng = np.random.default_rng(a.seed)
+    rows, oct_train_sizes = [], []
     for k in range(a.folds):
         otr, ote = fo != k, fo == k
         ctr, cte = fc != k, fc == k
-        mo, mc = fit(Xo[otr], yo[otr]), fit(Xc[ctr], yc[ctr])
+        mc = fit(Xc[ctr], yc[ctr])
 
-        def prob(model, X):
-            return model.predict_proba(X)[:, 1]
+        if a.match_train:
+            target = (int(ctr.sum()) if a.match_train == "images"
+                      else len(set(gc[ctr])))
+            reps = []
+            for _ in range(a.match_repeats):
+                m = match_mask(yo, go, otr, target, a.match_train, rng)
+                mo = fit(Xo[m], yo[m])
+                oct_train_sizes.append((int(m.sum()), len(set(go[m]))))
+                reps.append({
+                    "train_OCT": score(yo[m], prob(mo, Xo[m])),
+                    "within_OCT": score(yo[ote], prob(mo, Xo[ote])),
+                    "OCT_to_CFP": score(yc[cte], prob(mo, Xc[cte]))})
+            oct_part = {c: avg_scores([x[c] for x in reps]) for c in reps[0]}
+        else:
+            mo = fit(Xo[otr], yo[otr])
+            oct_part = {
+                "train_OCT": score(yo[otr], prob(mo, Xo[otr])),
+                "within_OCT": score(yo[ote], prob(mo, Xo[ote])),
+                "OCT_to_CFP": score(yc[cte], prob(mo, Xc[cte]))}
 
-        r = {"fold": k,
-             "train_OCT": score(yo[otr], prob(mo, Xo[otr])),
+        r = {"fold": k, **oct_part,
              "train_CFP": score(yc[ctr], prob(mc, Xc[ctr])),
-             "within_OCT": score(yo[ote], prob(mo, Xo[ote])),
              "within_CFP": score(yc[cte], prob(mc, Xc[cte])),
-             "OCT_to_CFP": score(yc[cte], prob(mo, Xc[cte])),
              "CFP_to_OCT": score(yo[ote], prob(mc, Xo[ote]))}
         rows.append(r)
+        size = ""
+        if a.match_train:
+            recent = oct_train_sizes[-a.match_repeats:]
+            size = (f"   OCT train ~{np.mean([s[0] for s in recent]):,.0f} "
+                    f"img / {np.mean([s[1] for s in recent]):,.0f} groups "
+                    f"vs CFP {int(ctr.sum()):,} / {len(set(gc[ctr]))}")
         print(f"  fold {k}:  within OCT {r['within_OCT']['auc']:.4f}   "
               f"within CFP {r['within_CFP']['auc']:.4f}   "
               f"OCT->CFP {r['OCT_to_CFP']['auc']:.4f}   "
-              f"CFP->OCT {r['CFP_to_OCT']['auc']:.4f}")
+              f"CFP->OCT {r['CFP_to_OCT']['auc']:.4f}{size}")
 
     summary = {c: {m: mean_sd([r[c][m] for r in rows]) for m in METRICS}
                for c in CONDITIONS}
@@ -374,6 +459,14 @@ def main():
                   "mapping": {"oct": oct_mapping, "cfp": cfp_mapping},
                   "oct_map": a.oct_map, "oct_cohort": a.oct_cohort,
                   "drop_mixed": a.drop_mixed,
+                  "match_train": a.match_train,
+                  "match_repeats": a.match_repeats if a.match_train else None,
+                  "oct_train_size_mean": (
+                      {"images": round(float(np.mean(
+                          [s[0] for s in oct_train_sizes])), 1),
+                       "groups": round(float(np.mean(
+                           [s[1] for s in oct_train_sizes])), 1)}
+                      if oct_train_sizes else None),
                   "classifier": "LogisticRegression(max_iter=2000, "
                                 "class_weight='balanced') on frozen "
                                 "ConvNeXt features",
